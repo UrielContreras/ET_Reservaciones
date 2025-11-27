@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ComedorSalaApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+641525423e8184fbffd17ef4fc831d59f6d3983b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+72939b6de9324d42b99da61a764653177b4f872f")]
 [assembly: System.Reflection.AssemblyProductAttribute("ComedorSalaApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ComedorSalaApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

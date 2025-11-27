@@ -78,4 +78,29 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] CreateEmployeeRequest request)
+    {
+        if (await _db.Users.AnyAsync(u => u.Email == request.Email))
+            return BadRequest("Ya existe un usuario con ese correo.");
+
+        var user = new User
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Area = request.Area,
+            Role = UserRole.Employee,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { Message = "User registered successfully" });
+    }
 }

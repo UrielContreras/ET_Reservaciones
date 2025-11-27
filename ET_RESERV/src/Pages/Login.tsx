@@ -1,27 +1,47 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Auth.css';
 
 interface LoginProps {
   onClose: () => void;
 }
 
-const Login = ({ onClose }: LoginProps) => {
+const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState<'empleado' | 'admin'>('empleado');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email, password, userType });
-    
-    // Simular autenticación exitosa
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('userType', userType);
-    window.dispatchEvent(new Event('storage'));
-    onClose();
+    setError(null);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        email,
+        password,
+      });
+
+      const { token, role } = response.data;
+
+      // Guardar autenticación
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userType', role === 'HR' ? 'admin' : 'empleado');
+      localStorage.setItem('token', token);
+      window.dispatchEvent(new Event('storage'));
+      onClose();
+    } catch (err: any) {
+      if (err.response?.data) {
+        setError(err.response.data);
+      } else {
+        setError('Credenciales inválidas o error del servidor.');
+      }
+      console.error('Login failed:', err);
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
+// ... (el resto del componente sigue igual)
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -42,7 +62,7 @@ const Login = ({ onClose }: LoginProps) => {
             <select
               id="userType"
               value={userType}
-              onChange={(e) => setUserType(e.target.value as 'empleado' | 'admin')}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setUserType(e.target.value as 'empleado' | 'admin')}
               required
             >
               <option value="empleado">Empleado</option>
@@ -56,7 +76,7 @@ const Login = ({ onClose }: LoginProps) => {
               type="email"
               id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder="tu@email.com"
               required
             />
@@ -68,11 +88,13 @@ const Login = ({ onClose }: LoginProps) => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
             />
           </div>
+
+          {error && <div className="error-message">{error}</div>}
 
           <button type="submit" className="btn-primary">
             Iniciar Sesión

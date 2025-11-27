@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Auth.css';
 
 interface RegisterProps {
@@ -7,11 +9,15 @@ interface RegisterProps {
 
 const Register = ({ onClose }: RegisterProps) => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    area: ''
   });
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -20,9 +26,38 @@ const Register = ({ onClose }: RegisterProps) => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Register:', formData);
+    setError(null);
+    setSuccessMessage(null);
+
+    // Validar que las contraseñas coincidan
+    if (formData.password !== formData.confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/register`, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        area: formData.area
+      });
+
+      setSuccessMessage('¡Registro exitoso! Redirigiendo...');
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      if (err.response?.data) {
+        setError(err.response.data);
+      } else {
+        setError('Error al registrar. Por favor intenta de nuevo.');
+      }
+      console.error('Registration failed:', err);
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -42,14 +77,27 @@ const Register = ({ onClose }: RegisterProps) => {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="name">Nombre completo</label>
+            <label htmlFor="firstName">Nombre</label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
               onChange={handleChange}
-              placeholder="Juan Pérez"
+              placeholder="Juan"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="lastName">Apellido</label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              placeholder="Pérez"
               required
             />
           </div>
@@ -63,6 +111,19 @@ const Register = ({ onClose }: RegisterProps) => {
               value={formData.email}
               onChange={handleChange}
               placeholder="tu@email.com"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="area">Área</label>
+            <input
+              type="text"
+              id="area"
+              name="area"
+              value={formData.area}
+              onChange={handleChange}
+              placeholder="Departamento"
               required
             />
           </div>
@@ -92,6 +153,9 @@ const Register = ({ onClose }: RegisterProps) => {
               required
             />
           </div>
+
+          {error && <div className="error-message">{error}</div>}
+          {successMessage && <div className="success-message">{successMessage}</div>}
 
           <button type="submit" className="btn-primary">
             Registrarse
