@@ -9,7 +9,7 @@ const Home = () => {
         </div>
         <div className="nav-links">
           <a href="#login">Iniciar Sesión</a>
-          <a href="#register" className="btn-outline">Registrarse</a>
+          
         </div>
       </nav>
 
@@ -23,7 +23,7 @@ const Home = () => {
             Reserva tu espacio en la Oficina. 
           </p>
           <div className="hero-buttons">
-            <a href="#register" className="btn-primary">Comenzar Ahora</a>
+            
             <a href="#login" className="btn-secondary">Iniciar Sesión</a>
           </div>
         </div>

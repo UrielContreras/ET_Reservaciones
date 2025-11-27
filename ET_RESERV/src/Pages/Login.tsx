@@ -8,13 +8,15 @@ interface LoginProps {
 const Login = ({ onClose }: LoginProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState<'empleado' | 'admin'>('empleado');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email, password });
+    console.log('Login:', { email, password, userType });
     
     // Simular autenticación exitosa
     localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userType', userType);
     window.dispatchEvent(new Event('storage'));
     onClose();
   };
@@ -35,6 +37,19 @@ const Login = ({ onClose }: LoginProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="userType">Tipo de usuario</label>
+            <select
+              id="userType"
+              value={userType}
+              onChange={(e) => setUserType(e.target.value as 'empleado' | 'admin')}
+              required
+            >
+              <option value="empleado">Empleado</option>
+              <option value="admin">Administrador RH</option>
+            </select>
+          </div>
+
           <div className="form-group">
             <label htmlFor="email">Correo electrónico</label>
             <input

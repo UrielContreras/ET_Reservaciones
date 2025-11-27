@@ -7,6 +7,7 @@ const ReservHome = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userType');
     window.location.hash = '';
   };
 
