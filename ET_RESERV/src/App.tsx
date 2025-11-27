@@ -3,6 +3,7 @@ import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Register from './Pages/Register'
 import ReservHome from './Pages/Reserv_home'
+import HomeAdmin from './Pages/Home_Admin'
 
 function App() {
   const [showLogin, setShowLogin] = useState(false)
@@ -10,12 +11,18 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('isAuthenticated') === 'true'
   })
+  const [userType, setUserType] = useState<'empleado' | 'admin'>(() => {
+    return (localStorage.getItem('userType') as 'empleado' | 'admin') || 'empleado'
+  })
 
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1)
       const authStatus = localStorage.getItem('isAuthenticated') === 'true'
+      const currentUserType = (localStorage.getItem('userType') as 'empleado' | 'admin') || 'empleado'
+      
       setIsAuthenticated(authStatus)
+      setUserType(currentUserType)
       
       if (hash === 'login' && !authStatus) {
         setShowLogin(true)
@@ -47,7 +54,12 @@ function App() {
   }
 
   if (isAuthenticated) {
-    return <ReservHome />
+    // Redirigir según el tipo de usuario
+    if (userType === 'admin') {
+      return <HomeAdmin />
+    } else {
+      return <ReservHome />
+    }
   }
 
   return (
