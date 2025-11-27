@@ -1,0 +1,53 @@
+import '../Styles/Home.css';
+
+const Home = () => {
+  return (
+    <div className="home-container">
+      <nav className="navbar">
+        <div className="nav-brand">
+          <h2>ET Reservaciones</h2>
+        </div>
+        <div className="nav-links">
+          <a href="#login">Iniciar Sesión</a>
+          <a href="#register" className="btn-outline">Registrarse</a>
+        </div>
+      </nav>
+
+      <section className="hero">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Reserva tu espacio
+            <span className="gradient-text"> en segundos</span>
+          </h1>
+          <p className="hero-subtitle">
+            Reserva tu espacio en la Oficina. 
+          </p>
+          <div className="hero-buttons">
+            <a href="#register" className="btn-primary">Comenzar Ahora</a>
+            <a href="#login" className="btn-secondary">Iniciar Sesión</a>
+          </div>
+        </div>
+      </section>
+
+      <section className="features">
+        <div className="feature-card">
+          <div className="feature-icon">⚡</div>
+          <h3>Rápido</h3>
+          <p>Reserva en menos de un minuto</p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">🔒</div>
+          <h3>Seguro</h3>
+          <p>Tus datos están protegidos</p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">📱</div>
+          <h3>Accesible</h3>
+          <p>Desde cualquier dispositivo</p>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default Home;
