@@ -45,18 +45,7 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="title">Título de la reservación</label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Ej: Reunión con cliente"
-              required
-            />
-          </div>
+          
 
           <div className="form-row">
             
