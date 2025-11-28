@@ -102,9 +102,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
           </button>
         </form>
 
-        <div className="auth-footer">
-          <p>¿No tienes una cuenta? <a href="#register">Regístrate</a></p>
-        </div>
+      
       </div>
     </div>
   );

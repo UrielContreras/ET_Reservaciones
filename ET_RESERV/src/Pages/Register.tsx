@@ -14,12 +14,13 @@ const Register = ({ onClose }: RegisterProps) => {
     email: '',
     password: '',
     confirmPassword: '',
-    area: ''
+    area: '',
+    userType: 'empleado' as 'empleado' | 'admin'
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -43,15 +44,16 @@ const Register = ({ onClose }: RegisterProps) => {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        area: formData.area
+        area: formData.area,
+        role: formData.userType === 'admin' ? 1 : 0
       });
 
       setSuccessMessage('¡Registro exitoso! Redirigiendo...');
       setTimeout(() => {
         onClose();
       }, 2000);
-    } catch (err: any) {
-      if (err.response?.data) {
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data) {
         setError(err.response.data);
       } else {
         setError('Error al registrar. Por favor intenta de nuevo.');
@@ -71,11 +73,25 @@ const Register = ({ onClose }: RegisterProps) => {
       <div className="auth-card">
         <button className="modal-close" onClick={onClose}>&times;</button>
         <div className="auth-header">
-          <h1>Crear Cuenta</h1>
-          <p>Únete a nosotros hoy</p>
+          <h1>Crear nuevo usuario</h1>
+          <p>Agrega un usuario tipo empleado/administrador</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="userType">Tipo de usuario</label>
+            <select
+              id="userType"
+              name="userType"
+              value={formData.userType}
+              onChange={handleChange}
+              required
+            >
+              <option value="empleado">Empleado</option>
+              <option value="admin">Administrador RH</option>
+            </select>
+          </div>
+
           <div className="form-group">
             <label htmlFor="firstName">Nombre</label>
             <input
@@ -101,6 +117,8 @@ const Register = ({ onClose }: RegisterProps) => {
               required
             />
           </div>
+
+        
 
           <div className="form-group">
             <label htmlFor="email">Correo electrónico</label>
@@ -162,9 +180,7 @@ const Register = ({ onClose }: RegisterProps) => {
           </button>
         </form>
 
-        <div className="auth-footer">
-          <p>¿Ya tienes una cuenta? <a href="#login">Inicia sesión</a></p>
-        </div>
+       
       </div>
     </div>
   );
