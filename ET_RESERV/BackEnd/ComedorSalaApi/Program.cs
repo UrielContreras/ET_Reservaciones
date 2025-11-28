@@ -1,5 +1,6 @@
 using System.Text;
 using ComedorSalaApi.Data;
+using ComedorSalaApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Background Service para expirar reservaciones
+builder.Services.AddHostedService<ReservationExpirationService>();
 
 var app = builder.Build();
 

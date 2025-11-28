@@ -147,7 +147,7 @@ const ReservHome = () => {
         <div className="dashboard-card" style={{ minWidth: 220 }}>
         <div className="card-icon">📅</div>
         <h3>Mis Reservaciones</h3>
-        <p className="card-number">{allReservations.filter(r => r.status === 'Active').length}</p>
+        <p className="card-number">{allReservations.length}</p>
         <button className="btn-card" onClick={() => setShowMyReservations(true)}>Ver todas</button>
         </div>
 
@@ -223,16 +223,16 @@ const ReservHome = () => {
           <button className="modal-close" onClick={() => setShowMyReservations(false)}>&times;</button>
           <div className="auth-header">
             <h1>Mis Reservaciones</h1>
-            <p>Todas tus reservaciones activas</p>
+            <p>Todo tu historial de reservaciones</p>
           </div>
           <div className="modal-content">
-            {allReservations.filter(r => r.status === 'Active').length === 0 ? (
+            {allReservations.length === 0 ? (
               <div className="empty-state">
-                <p>No tienes reservaciones activas</p>
+                <p>No tienes reservaciones</p>
               </div>
             ) : (
               <div className="reservations-list">
-                {allReservations.filter(r => r.status === 'Active').map((reservation) => (
+                {allReservations.map((reservation) => (
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">
@@ -243,7 +243,13 @@ const ReservHome = () => {
                         <span>📅 {reservation.date}</span>
                       </div>
                     </div>
-                    <span className="reservation-status status-active">Activa</span>
+                    <span className={`reservation-status ${
+                      reservation.status === 'Active' ? 'status-active' :
+                      reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                    }`}>
+                      {reservation.status === 'Active' ? 'Activa' :
+                       reservation.status === 'Cancelled' ? 'Cancelada' : 'Completada'}
+                    </span>
                   </div>
                 ))}
               </div>

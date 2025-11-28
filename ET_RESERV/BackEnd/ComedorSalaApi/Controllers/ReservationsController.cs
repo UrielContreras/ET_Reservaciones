@@ -53,8 +53,30 @@ public class ReservationsController : ControllerBase
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyTodayReservation()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = DateTime.Now;
         var userId = GetCurrentUserId();
 
+        // Primero actualizar las reservaciones expiradas
+        var activeReservations = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Where(r => r.UserId == userId && r.Date == today && r.Status == ReservationStatus.Active)
+            .ToListAsync();
+
+        foreach (var reservation in activeReservations)
+        {
+            var slotEndTime = DateTime.Today + reservation.TimeSlot.EndTime;
+            if (now > slotEndTime)
+            {
+                reservation.Status = ReservationStatus.Expired;
+            }
+        }
+
+        if (activeReservations.Any(r => r.Status == ReservationStatus.Expired))
+        {
+            await _db.SaveChangesAsync();
+        }
+
+        // Luego obtener todas las reservaciones del día
         var reservations = await _db.Reservations
             .Include(r => r.TimeSlot)
             .Where(r => r.UserId == userId && r.Date == today)
@@ -76,8 +98,31 @@ public class ReservationsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyAllReservations()
     {
+        var now = DateTime.Now;
+        var today = DateOnly.FromDateTime(DateTime.Today);
         var userId = GetCurrentUserId();
 
+        // Actualizar las reservaciones activas que ya expiraron
+        var activeReservations = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Where(r => r.UserId == userId && r.Status == ReservationStatus.Active)
+            .ToListAsync();
+
+        foreach (var reservation in activeReservations)
+        {
+            var slotEndTime = reservation.Date.ToDateTime(TimeOnly.MinValue) + reservation.TimeSlot.EndTime;
+            if (now > slotEndTime)
+            {
+                reservation.Status = ReservationStatus.Expired;
+            }
+        }
+
+        if (activeReservations.Any(r => r.Status == ReservationStatus.Expired))
+        {
+            await _db.SaveChangesAsync();
+        }
+
+        // Obtener todas las reservaciones
         var reservations = await _db.Reservations
             .Include(r => r.TimeSlot)
             .Where(r => r.UserId == userId)
@@ -104,6 +149,14 @@ public class ReservationsController : ControllerBase
         var now = DateTime.Now;
         var userId = GetCurrentUserId();
 
+        // Validar que sea después de las 10:00 AM
+        var cutoffTime = DateTime.Today.AddHours(10);
+        if (now < cutoffTime)
+        {
+            var minutesUntil10AM = (int)(cutoffTime - now).TotalMinutes;
+            return BadRequest($"Las reservaciones solo pueden hacerse a partir de las 10:00 AM. Faltan {minutesUntil10AM} minutos.");
+        }
+
         var user = await _db.Users.FindAsync(userId);
         if (user == null || !user.IsActive) return Unauthorized();
 
@@ -116,14 +169,14 @@ public class ReservationsController : ControllerBase
         if (now > slotEndToday)
             return BadRequest("Este horario ya terminó.");
 
-        // Validar 1 reserva activa por día
-        var existingActive = await _db.Reservations.AnyAsync(r =>
+        // Validar 1 reserva por día (activa o completada)
+        var existingReservation = await _db.Reservations.AnyAsync(r =>
             r.UserId == userId &&
             r.Date == today &&
-            r.Status == ReservationStatus.Active);
+            (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.Expired));
 
-        if (existingActive)
-            return BadRequest("Ya tienes una reserva activa para hoy.");
+        if (existingReservation)
+            return BadRequest("Ya tienes una reservación para hoy. Solo puedes hacer una reservación por día.");
 
         // Validar capacidad
         var countActiveInSlot = await _db.Reservations.CountAsync(r =>
