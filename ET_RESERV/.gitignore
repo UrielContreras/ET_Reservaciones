@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# .NET Build outputs
+**/bin/
+**/obj/
+*.dll
+*.pdb
+*.exe
+*.cache
+*.editorconfig
+*.AssemblyInfo.cs
+*.csproj.*.cache
+*.assets.cache
+*.genruntimeconfig.cache
+*.sourcelink.json
+*.dswa.cache.json
