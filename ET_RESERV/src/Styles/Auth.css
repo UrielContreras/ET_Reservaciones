@@ -297,6 +297,85 @@
   text-align: center;
 }
 
+/* Info Message */
+.info-message {
+  padding: 0.75rem 1rem;
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Loading Message */
+.loading-message {
+  padding: 1.5rem;
+  text-align: center;
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+/* Availability Indicators */
+.availability-indicators {
+  margin-top: 0.75rem;
+}
+
+.availability-indicator {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.indicator-green {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.indicator-yellow {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.indicator-orange {
+  background-color: #ffe4d1;
+  color: #d97706;
+  border: 1px solid #fdba74;
+}
+
+.indicator-red {
+  background-color: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+/* Time slot select with colors */
+.time-slot-select option.available-high {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.time-slot-select option.available-medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.time-slot-select option.available-low {
+  background-color: #ffe4d1;
+  color: #d97706;
+}
+
+.time-slot-select option.available-none {
+  background-color: #fee;
+  color: #c33;
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 2rem 1.5rem;

@@ -1,88 +1,97 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Auth.css';
 
 interface CreateReservProps {
   onClose: () => void;
 }
 
-// Definir los horarios disponibles
-const HORARIOS = [
-  { value: '13:00-13:40', label: '13:00 a 13:40' },
-  { value: '13:41-14:21', label: '13:41 a 14:21' },
-  { value: '14:22-15:02', label: '14:22 a 15:02' },
-  { value: '15:03-15:43', label: '15:03 a 15:43' },
-  { value: '15:44-16:24', label: '15:44 a 16:24' },
-  { value: '16:25-17:05', label: '16:25 a 17:05' },
-];
-
-const MAX_CAPACIDAD = 5; // Capacidad máxima por horario
+interface TimeSlot {
+  id: number;
+  timeRange: string;
+  available: number;
+}
 
 const CreateReserv = ({ onClose }: CreateReservProps) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    time: '',
-    duration: '',
-    location: '',
-    description: ''
-  });
+  const [timeSlotId, setTimeSlotId] = useState<number | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('No estás autenticado');
+          setLoading(false);
+          return;
+        }
 
-  // Calcular disponibilidad por horario basado en la ubicación seleccionada
-  const calcularDisponibilidad = (): { [key: string]: number } => {
-    const reservasGuardadas = JSON.parse(localStorage.getItem('reservaciones') || '[]');
-    const disponibilidadPorHorario: { [key: string]: number } = {};
-    
-    HORARIOS.forEach(horario => {
-      const reservasEnHorario = reservasGuardadas.filter(
-        (r: { time: string; location: string }) => 
-          r.time === horario.value && r.location === formData.location
-      ).length;
-      disponibilidadPorHorario[horario.value] = MAX_CAPACIDAD - reservasEnHorario;
-    });
-    
-    return disponibilidadPorHorario;
-  };
+        const response = await axios.get(`${API_BASE_URL}/api/reservations/timeslots`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
 
-  const disponibilidad = calcularDisponibilidad();
+        setTimeSlots(response.data);
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching timeslots:', err);
+        setError('Error al cargar los horarios disponibles');
+        setLoading(false);
+      }
+    };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === 'duration') {
-      setSelectedTimeSlot(value);
-    }
-    
-    setFormData({
-      ...formData,
-      [name]: value,
-      ...(name === 'duration' && { time: value })
-    });
-  };
+    fetchTimeSlots();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validar disponibilidad
-    if (disponibilidad[formData.time] <= 0) {
-      alert('No hay lugares disponibles en este horario');
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!timeSlotId) {
+      setError('Por favor selecciona un horario');
       return;
     }
-    
-    // Guardar la reservación en localStorage
-    const reservasGuardadas = JSON.parse(localStorage.getItem('reservaciones') || '[]');
-    const nuevaReserva = {
-      ...formData,
-      id: Date.now(),
-      fecha: new Date().toLocaleDateString(),
-    };
-    
-    reservasGuardadas.push(nuevaReserva);
-    localStorage.setItem('reservaciones', JSON.stringify(reservasGuardadas));
-    
-    console.log('Nueva Reservación:', nuevaReserva);
-    alert('Reservación creada exitosamente');
-    onClose();
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No estás autenticado');
+        return;
+      }
+
+      await axios.post(
+        `${API_BASE_URL}/api/reservations`,
+        { timeSlotId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setSuccessMessage('¡Reservación creada exitosamente!');
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err: any) {
+      console.error('Reservation failed:', err);
+      console.error('Response data:', err.response?.data);
+      console.error('Response status:', err.response?.status);
+      
+      if (err.response?.status === 403) {
+        setError('No tienes permisos para crear reservaciones. Asegúrate de estar registrado como empleado.');
+      } else if (err.response?.data) {
+        setError(typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data));
+      } else {
+        setError('Error al crear la reservación. Por favor intenta de nuevo.');
+      }
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -101,73 +110,86 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          
-
-          <div className="form-group">
-            <label htmlFor="location">Ubicación</label>
-            <select
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccionar ubicación</option>
-              <option value="Comedor">Comedor</option>
-              <option value="Sala de juntas">Sala de juntas</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="duration">
-              Horario 
-              {selectedTimeSlot && formData.location && (
-                <span className={`availability-badge ${disponibilidad[selectedTimeSlot] === 0 ? 'full' : disponibilidad[selectedTimeSlot] <= 2 ? 'low' : 'available'}`}>
-                  {disponibilidad[selectedTimeSlot] || 0} lugares disponibles
-                </span>
-              )}
-            </label>
-            <select
-              id="duration"
-              name="duration"
-              value={formData.duration}
-              onChange={handleChange}
-              required
-              disabled={!formData.location}
-            >
-              <option value="">Seleccionar horario</option>
-              {HORARIOS.map((horario) => {
-                const disponible = disponibilidad[horario.value] || MAX_CAPACIDAD;
-                const isDisabled = disponible === 0;
+          {loading ? (
+            <div className="loading-message">Cargando horarios disponibles...</div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label htmlFor="timeSlot">Selecciona tu horario</label>
+                <select
+                  id="timeSlot"
+                  value={timeSlotId || ''}
+                  onChange={(e) => setTimeSlotId(Number(e.target.value))}
+                  required
+                  className="time-slot-select"
+                >
+                  <option value="">Seleccionar horario</option>
+                  {timeSlots.map((slot) => {
+                    const isDisabled = slot.available === 0;
+                    let colorClass = '';
+                    if (slot.available > 3) colorClass = 'available-high';
+                    else if (slot.available >= 2 && slot.available <= 3) colorClass = 'available-medium';
+                    else if (slot.available === 1) colorClass = 'available-low';
+                    else colorClass = 'available-none';
+                    
+                    return (
+                      <option 
+                        key={slot.id} 
+                        value={slot.id}
+                        disabled={isDisabled}
+                        className={colorClass}
+                      >
+                        {slot.timeRange} {isDisabled ? '(Sin disponibilidad)' : `(${slot.available} lugares disponibles)`}
+                      </option>
+                    );
+                  })}
+                </select>
                 
-                return (
-                  <option 
-                    key={horario.value} 
-                    value={horario.value}
-                    disabled={isDisabled}
-                  >
-                    {horario.label} {isDisabled ? '(Sin disponibilidad)' : `(${disponible} lugares)`}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+                {timeSlotId && (
+                  <div className="availability-indicators">
+                    {timeSlots.map((slot) => {
+                      if (slot.id === timeSlotId) {
+                        let colorClass = '';
+                        let message = '';
+                        if (slot.available > 3) {
+                          colorClass = 'indicator-green';
+                          message = `✓ Buena disponibilidad (${slot.available} lugares)`;
+                        } else if (slot.available >= 2 && slot.available <= 3) {
+                          colorClass = 'indicator-yellow';
+                          message = `⚠ Disponibilidad media (${slot.available} lugares)`;
+                        } else if (slot.available === 1) {
+                          colorClass = 'indicator-orange';
+                          message = `⚠ Último lugar disponible`;
+                        } else {
+                          colorClass = 'indicator-red';
+                          message = `✕ Sin disponibilidad`;
+                        }
+                        return (
+                          <div key={slot.id} className={`availability-indicator ${colorClass}`}>
+                            {message}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="description">Descripción (opcional)</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Detalles adicionales..."
-              rows={4}
-            />
-          </div>
+              {timeSlotId && (
+                <div className="info-message">
+                  <strong>Nota:</strong> Solo puedes tener una reserva activa por día.
+                </div>
+              )}
 
-          <button type="submit" className="btn-primary">
-            Crear Reservación
-          </button>
+              {error && <div className="error-message">{error}</div>}
+              {successMessage && <div className="success-message">{successMessage}</div>}
+
+              <button type="submit" className="btn-primary" disabled={loading || !timeSlotId}>
+                Crear Reservación
+              </button>
+            </>
+          )}
         </form>
       </div>
     </div>

@@ -10,11 +10,10 @@ namespace ComedorSalaApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Employee")]
 public class ReservationsController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private const int CAPACIDAD = 20; // puedes pasar esto a configuración
+    private const int CAPACIDAD = 5; // puedes pasar esto a configuración
 
     public ReservationsController(AppDbContext db)
     {
@@ -29,7 +28,28 @@ public class ReservationsController : ControllerBase
         return int.Parse(sub!);
     }
 
+    [HttpGet("timeslots")]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<object>>> GetAvailableTimeSlots()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var timeSlots = await _db.TimeSlots.Where(s => s.IsActive).OrderBy(s => s.StartTime).ToListAsync();
+
+        var result = timeSlots.Select(slot => new
+        {
+            slot.Id,
+            TimeRange = $"{slot.StartTime:hh\\:mm}-{slot.EndTime:hh\\:mm}",
+            Available = CAPACIDAD - _db.Reservations.Count(r =>
+                r.Date == today &&
+                r.TimeSlotId == slot.Id &&
+                r.Status == ReservationStatus.Active)
+        });
+
+        return Ok(result);
+    }
+
     [HttpGet("today")]
+    [Authorize(Roles = "Employee")]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyTodayReservation()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -52,7 +72,32 @@ public class ReservationsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("my-reservations")]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyAllReservations()
+    {
+        var userId = GetCurrentUserId();
+
+        var reservations = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.Date)
+            .ToListAsync();
+
+        var result = reservations.Select(r => new ReservationDto
+        {
+            Id = r.Id,
+            Date = r.Date,
+            TimeSlotId = r.TimeSlotId,
+            TimeRange = $"{r.TimeSlot.StartTime:hh\\:mm}-{r.TimeSlot.EndTime:hh\\:mm}",
+            Status = r.Status.ToString()
+        });
+
+        return Ok(result);
+    }
+
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> CreateReservation([FromBody] CreateReservationRequest request)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -105,6 +150,7 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPost("{id:int}/cancel")]
+    [Authorize(Roles = "Employee")]
     public async Task<IActionResult> CancelReservation(int id)
     {
         var userId = GetCurrentUserId();

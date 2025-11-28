@@ -76,4 +76,19 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Seed TimeSlots if they don't exist
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (!db.TimeSlots.Any())
+    {
+        db.TimeSlots.AddRange(
+            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(14, 0, 0), IsActive = true },
+            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(14, 0, 0), EndTime = new TimeSpan(15, 0, 0), IsActive = true },
+            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(15, 0, 0), EndTime = new TimeSpan(16, 0, 0), IsActive = true }
+        );
+        db.SaveChanges();
+    }
+}
+
 app.Run();

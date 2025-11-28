@@ -5985,23 +5985,26 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Uriel.Contreras\\.nuget\\packages\\": {},
+    "C:\\Users\\Joshua.Diaz\\.nuget\\packages\\": {},
+    "C:\\Program Files\\DevExpress 24.2\\Components\\Offline Packages": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Uriel.Contreras\\Documents\\Estrategia Tecnologica\\ET_Reserv\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\ComedorSalaApi.csproj",
+      "projectUniqueName": "C:\\Users\\Joshua.Diaz\\Documents\\Proyectos VS Code\\React Native\\Comedor\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\ComedorSalaApi.csproj",
       "projectName": "ComedorSalaApi",
-      "projectPath": "C:\\Users\\Uriel.Contreras\\Documents\\Estrategia Tecnologica\\ET_Reserv\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\ComedorSalaApi.csproj",
-      "packagesPath": "C:\\Users\\Uriel.Contreras\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Uriel.Contreras\\Documents\\Estrategia Tecnologica\\ET_Reserv\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\obj\\",
+      "projectPath": "C:\\Users\\Joshua.Diaz\\Documents\\Proyectos VS Code\\React Native\\Comedor\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\ComedorSalaApi.csproj",
+      "packagesPath": "C:\\Users\\Joshua.Diaz\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Joshua.Diaz\\Documents\\Proyectos VS Code\\React Native\\Comedor\\ET_Reservaciones\\ET_RESERV\\BackEnd\\ComedorSalaApi\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
+        "C:\\Program Files\\DevExpress 24.2\\Components\\Offline Packages",
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Uriel.Contreras\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Joshua.Diaz\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\DevExpress 24.2.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -6010,8 +6013,10 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
-        "https://api.nuget.org/v3/index.json": {}
+        "C:\\Program Files\\DevExpress 24.2\\Components\\System\\Components\\Packages": {},
+        "C:\\Program Files\\DevExpress 24.2\\Components\\System\\Components\\Packages": {},
+        "https://api.nuget.org/v3/index.json": {},
+        "https://nuget.devexpress.com/bf292RwBMzr994ou3G4sPIzEwUqYwP3Qo9ue3hpBXMMf7uh2DV/api/v3/index.json": {}
       },
       "frameworks": {
         "net9.0": {
