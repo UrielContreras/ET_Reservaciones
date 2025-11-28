@@ -179,6 +179,81 @@
   transform: translateY(0);
 }
 
+/* Confirmation Modal Styles */
+.confirmation-message {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.confirmation-message p {
+  color: #2d3748;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.user-info-delete {
+  background: #f7fafc;
+  padding: 1rem;
+  border-radius: 10px;
+  margin: 1rem 0;
+  border-left: 4px solid #e74c3c;
+}
+
+.user-info-delete strong {
+  color: #2d3748;
+  font-size: 1.1rem;
+}
+
+.warning-text {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.button-group button {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #2d3748;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(231, 76, 60, 0.4);
+}
+
+.btn-secondary:active,
+.btn-danger:active {
+  transform: translateY(0);
+}
+
 .auth-footer {
   text-align: center;
   margin-top: 1.5rem;

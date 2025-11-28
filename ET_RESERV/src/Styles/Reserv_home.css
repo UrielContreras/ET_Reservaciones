@@ -321,6 +321,51 @@ html, body {
   color: #c41d7f;
 }
 
+.role-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.role-badge.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.role-badge.expired {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.role-badge.completed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+/* Action Buttons */
+.btn-delete {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-delete:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn-delete:active {
+  transform: translateY(0);
+}
+
 /* Reservations List */
 .reservations-list {
   display: flex;

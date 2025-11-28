@@ -228,4 +228,29 @@ public class ReservationsController : ControllerBase
 
         return Ok();
     }
+
+    [HttpGet("all")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<object>>> GetAllReservations()
+    {
+        var reservations = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Include(r => r.User)
+            .OrderByDescending(r => r.Date)
+            .ThenBy(r => r.TimeSlot.StartTime)
+            .ToListAsync();
+
+        var result = reservations.Select(r => new
+        {
+            r.Id,
+            r.Date,
+            TimeRange = $"{r.TimeSlot.StartTime:hh\\:mm}-{r.TimeSlot.EndTime:hh\\:mm}",
+            Status = r.Status.ToString(),
+            UserName = $"{r.User.FirstName} {r.User.LastName}",
+            r.User.Email,
+            r.User.Area
+        });
+
+        return Ok(result);
+    }
 }

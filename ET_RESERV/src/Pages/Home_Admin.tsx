@@ -13,10 +13,25 @@ interface User {
   role: string;
 }
 
+interface Reservation {
+  id: number;
+  date: string;
+  timeRange: string;
+  status: string;
+  userName: string;
+  email: string;
+  area: string;
+}
+
 const HomeAdmin = () => {
   const [showRegister, setShowRegister] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingReservations, setLoadingReservations] = useState(true);
+  const [showView, setShowView] = useState<'users' | 'reservations'>('users');
 
   const loadUsers = async () => {
     try {
@@ -30,8 +45,21 @@ const HomeAdmin = () => {
     }
   };
 
+  const loadReservations = async () => {
+    try {
+      setLoadingReservations(true);
+      const response = await axios.get(`${API_BASE_URL}/api/reservations/all`);
+      setReservations(response.data);
+    } catch (error) {
+      console.error('Error al cargar reservaciones:', error);
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadReservations();
   }, []);
 
   const handleLogout = () => {
@@ -43,6 +71,30 @@ const HomeAdmin = () => {
   const handleRegisterClose = () => {
     setShowRegister(false);
     loadUsers(); // Recargar usuarios después de crear uno nuevo
+  };
+
+  const handleDeleteUser = (userId: number, userName: string) => {
+    setUserToDelete({ id: userId, name: userName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/users/${userToDelete.id}`);
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      loadUsers(); // Recargar la lista de usuarios
+    } catch (error) {
+      console.error('Error al dar de baja usuario:', error);
+      alert('Error al dar de baja el usuario. Por favor intenta de nuevo.');
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
   };
 
   return (
@@ -76,15 +128,15 @@ const HomeAdmin = () => {
           <div className="dashboard-card">
             <div className="card-icon">📊</div>
             <h3>Total Reservaciones</h3>
-            <p className="card-number">0</p>
-            <button className="btn-card">Ver todas</button>
+            <p className="card-number">{reservations.length}</p>
+            <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
           </div>
 
           <div className="dashboard-card">
             <div className="card-icon">👥</div>
             <h3>Usuarios Activos</h3>
             <p className="card-number">{users.length}</p>
-            <button className="btn-card">Gestionar</button>
+            <button className="btn-card" onClick={() => setShowView('users')}>Gestionar</button>
           </div>
 
           <div className="dashboard-card">
@@ -96,9 +148,10 @@ const HomeAdmin = () => {
 
         </div>
 
-        <section className="recent-section">
-          <h2>Todos los Usuarios del Sistema</h2>
-          {loading ? (
+        {showView === 'users' && (
+          <section className="recent-section">
+            <h2>Todos los Usuarios del Sistema</h2>
+            {loading ? (
             <div className="empty-state">
               <p>Cargando usuarios...</p>
             </div>
@@ -117,6 +170,7 @@ const HomeAdmin = () => {
                     <th>Correo</th>
                     <th>Área</th>
                     <th>Rol</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -131,16 +185,107 @@ const HomeAdmin = () => {
                           {user.role === 'Employee' ? 'Empleado' : 'Administrador'}
                         </span>
                       </td>
+                      <td>
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}
+                          title="Dar de baja usuario"
+                        >
+                          🗑️ 
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
+          </section>
+        )}
+
+        {showView === 'reservations' && (
+          <section className="recent-section">
+          <h2>Todas las Reservaciones del Sistema</h2>
+          {loadingReservations ? (
+            <div className="empty-state">
+              <p>Cargando reservaciones...</p>
+            </div>
+          ) : reservations.length === 0 ? (
+            <div className="empty-state">
+              <p>No hay reservaciones registradas</p>
+              <span>Las reservaciones aparecerán aquí</span>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Área</th>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reservations.map((reservation) => (
+                    <tr key={reservation.id}>
+                      <td>{reservation.userName}</td>
+                      <td>{reservation.email}</td>
+                      <td>{reservation.area || 'N/A'}</td>
+                      <td>{new Date(reservation.date).toLocaleDateString('es-MX')}</td>
+                      <td>{reservation.timeRange}</td>
+                      <td>
+                        <span className={`role-badge ${reservation.status.toLowerCase()}`}>
+                          {reservation.status === 'Active' ? 'Activa' : 
+                           reservation.status === 'Cancelled' ? 'Cancelada' : 
+                           reservation.status === 'Expired' ? 'Expirada' : 
+                           reservation.status === 'Completed' ? 'Completada' : reservation.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </section>
+        )}
       </div>
     </div>
     {showRegister && <Register onClose={handleRegisterClose} />}
+    
+    {showDeleteModal && userToDelete && (
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && cancelDelete()}>
+        <div className="auth-card">
+          <button className="modal-close" onClick={cancelDelete}>&times;</button>
+          <div className="auth-header">
+            <h1> Confirmar Eliminación</h1>
+            <p>Esta acción no se puede deshacer</p>
+          </div>
+
+          <div className="auth-form">
+            <div className="confirmation-message">
+              <p>¿Estás seguro de que deseas dar de baja al usuario?</p>
+              <div className="user-info-delete">
+                <strong>{userToDelete.name}</strong>
+              </div>
+              <p className="warning-text">Esta acción desactivará permanentemente la cuenta del usuario.</p>
+            </div>
+
+            <div className="button-group">
+              <button onClick={cancelDelete} className="btn-secondary">
+                Cancelar
+              </button>
+              <button onClick={confirmDelete} className="btn-danger">
+                Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 };

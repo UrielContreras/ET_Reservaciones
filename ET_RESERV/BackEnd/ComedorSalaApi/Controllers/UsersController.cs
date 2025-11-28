@@ -73,4 +73,19 @@ public class UsersController : ControllerBase
         
         return Ok(users);
     }
+
+    [HttpDelete("{id:int}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null)
+            return NotFound("Usuario no encontrado.");
+
+        // Eliminar permanentemente el usuario de la base de datos
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { Message = "Usuario eliminado exitosamente" });
+    }
 }
