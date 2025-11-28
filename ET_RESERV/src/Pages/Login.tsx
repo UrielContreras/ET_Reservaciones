@@ -20,6 +20,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         email,
         password,
+        requestedRole: userType // Enviar el tipo de usuario seleccionado
       });
 
       const { token, role } = response.data;
@@ -30,8 +31,8 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
       localStorage.setItem('token', token);
       window.dispatchEvent(new Event('storage'));
       onClose();
-    } catch (err: any) {
-      if (err.response?.data) {
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data) {
         setError(err.response.data);
       } else {
         setError('Credenciales inválidas o error del servidor.');

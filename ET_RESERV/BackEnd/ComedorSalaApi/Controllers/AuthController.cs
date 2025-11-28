@@ -40,6 +40,20 @@ public class AuthController : ControllerBase
         if (result == PasswordVerificationResult.Failed)
             return Unauthorized("Credenciales inválidas.");
 
+        // Verificar que el rol solicitado coincida con el rol del usuario
+        var requestedRole = request.RequestedRole?.ToUpper();
+        var userRoleString = user.Role.ToString().ToUpper();
+        
+        if (requestedRole == "ADMIN")
+            requestedRole = "HR";
+        else if (requestedRole == "EMPLEADO")
+            requestedRole = "EMPLOYEE";
+
+        if (requestedRole != userRoleString)
+        {
+            return Unauthorized($"No tienes permisos de {(requestedRole == "HR" ? "administrador" : "empleado")}. Tu rol es: {(user.Role == UserRole.Employee ? "empleado" : "administrador")}.");
+        }
+
         user.LastLoginAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
