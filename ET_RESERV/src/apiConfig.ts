@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'http://localhost:5269';
+export const API_BASE_URL = 'https://api-comedor-dev-g0b5edfpguemhvdx.northcentralus-01.azurewebsites.net';
