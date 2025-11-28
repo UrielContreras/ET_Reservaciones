@@ -53,4 +53,24 @@ public class UsersController : ControllerBase
         if (user == null) return NotFound();
         return Ok(user);
     }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAll()
+    {
+        var users = await _db.Users
+            .Where(u => u.IsActive)
+            .Select(u => new
+            {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.Email,
+                u.Area,
+                Role = u.Role.ToString()
+            })
+            .ToListAsync();
+        
+        return Ok(users);
+    }
 }
