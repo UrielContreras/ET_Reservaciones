@@ -8,12 +8,12 @@ interface RegisterEmployeeProps {
 }
 
 const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
+  const DEFAULT_PASSWORD = 'ETIISI2025';
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     area: ''
   });
   const [error, setError] = useState<string | null>(null);
@@ -31,26 +31,22 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
     setError(null);
     setSuccessMessage(null);
 
-    // Validar que las contraseñas coincidan
-    if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
     try {
       await axios.post(`${API_BASE_URL}/api/auth/register`, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: formData.password,
+        password: DEFAULT_PASSWORD,
         area: formData.area,
         role: 0 // Siempre empleado (0)
       });
 
-      setSuccessMessage('¡Registro exitoso! Redirigiendo al inicio de sesión...');
+      setSuccessMessage(`¡Registro exitoso! La contraseña temporal es: ${DEFAULT_PASSWORD}. El usuario debe cambiarla al iniciar sesión por primera vez.`);
+      
+      // Mantener el mensaje visible por más tiempo para que se pueda copiar la contraseña
       setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 5000);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data) {
         setError(err.response.data);
@@ -129,30 +125,16 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Mínimo 6 caracteres"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar contraseña</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Repite tu contraseña"
-              required
-            />
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            color: '#0369a1',
+            fontSize: '0.9rem',
+            marginBottom: '1rem'
+          }}>
+            <strong>📌 Nota:</strong> Se asignará la contraseña temporal <strong>{DEFAULT_PASSWORD}</strong> al nuevo empleado. El usuario deberá cambiarla al iniciar sesión por primera vez.
           </div>
 
           {error && (
@@ -170,14 +152,16 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
 
           {successMessage && (
             <div style={{
-              padding: '10px',
-              backgroundColor: '#efe',
-              border: '1px solid #cfc',
+              padding: '15px',
+              backgroundColor: '#dcfce7',
+              border: '2px solid #86efac',
               borderRadius: '8px',
-              color: '#3c3',
-              fontSize: '0.9rem'
+              color: '#166534',
+              fontSize: '0.95rem',
+              fontWeight: '500',
+              lineHeight: '1.6'
             }}>
-              {successMessage}
+              ✓ {successMessage}
             </div>
           )}
 
