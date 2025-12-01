@@ -31,6 +31,7 @@ const HomeAdmin = () => {
   const [showCreateReserv, setShowCreateReserv] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showUpdateUser, setShowUpdateUser] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -147,14 +148,21 @@ const HomeAdmin = () => {
         <div className="nav-user">
           <span className="admin-badge">👔 Administrador RH</span>
           <button
+            onClick={() => setShowChangePassword(true)}
+            className="btn-logout"
+            style={{ marginRight: '0.5rem', backgroundColor: '#ffffffff' }}
+          >
+            Cambiar Contraseña
+          </button>
+          <button
             onClick={() => {
                 handleLogout();
                 window.location.href = '/';
             }}
             className="btn-logout"
-        >
+          >
             Cerrar Sesión
-        </button>
+          </button>
         </div>
       </nav>
 
