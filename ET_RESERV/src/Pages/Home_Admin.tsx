@@ -5,6 +5,7 @@ import '../Styles/Reserv_home.css';
 import Register from './Register';
 import CreateReserv from './Create_reserv';
 import UpdateUsers from './Update_users';
+import ChangePassword from './ChangePassword';
 
 
 interface User {
@@ -319,6 +320,7 @@ const HomeAdmin = () => {
     {showRegister && <Register onClose={handleRegisterClose} />}
     {showCreateReserv && <CreateReserv onClose={handleCreateReservClose} />}
     {showUpdateUser && userToEdit && <UpdateUsers onClose={handleUpdateUserClose} user={userToEdit} />}
+    {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
     
     {showDeleteModal && userToDelete && (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && cancelDelete()}>
