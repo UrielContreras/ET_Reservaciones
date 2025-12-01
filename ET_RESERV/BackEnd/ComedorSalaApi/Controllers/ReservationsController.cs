@@ -169,7 +169,7 @@ public class ReservationsController : ControllerBase
             Date = today,
             TimeSlotId = request.TimeSlotId,
             Status = ReservationStatus.Active,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
 
         _db.Reservations.Add(reservation);

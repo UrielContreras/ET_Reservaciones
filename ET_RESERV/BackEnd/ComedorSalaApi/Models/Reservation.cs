@@ -21,6 +21,6 @@ public class Reservation
     public TimeSlot TimeSlot { get; set; } = null!;
 
     public ReservationStatus Status { get; set; } = ReservationStatus.Active;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? CheckInAt { get; set; }
 }
