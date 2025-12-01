@@ -60,15 +60,22 @@ public class ReservationExpirationService : BackgroundService
         foreach (var reservation in activeReservations)
         {
             // Crear la hora de fin completa: fecha de la reservación + hora de fin del slot
-            var reservationDateTime = reservation.Date.ToDateTime(TimeOnly.MinValue);
-            var slotEndTime = reservationDateTime.Add(reservation.TimeSlot.EndTime);
+            var reservationDate = reservation.Date.ToDateTime(TimeOnly.MinValue);
+            var slotEndTime = new DateTime(
+                reservationDate.Year, 
+                reservationDate.Month, 
+                reservationDate.Day,
+                reservation.TimeSlot.EndTime.Hours,
+                reservation.TimeSlot.EndTime.Minutes,
+                reservation.TimeSlot.EndTime.Seconds
+            );
             
             _logger.LogInformation($"[EXPIRATION SERVICE] Reservación {reservation.Id}: Fecha={reservation.Date}, " +
                 $"Horario={reservation.TimeSlot.StartTime:hh\\:mm}-{reservation.TimeSlot.EndTime:hh\\:mm}, " +
                 $"Fin calculado={slotEndTime:yyyy-MM-dd HH:mm:ss}, Ahora={now:yyyy-MM-dd HH:mm:ss}, " +
                 $"Diferencia={(slotEndTime - now).TotalMinutes:F1} minutos");
             
-            // Solo marcar como expirada si YA PASÓ el horario de fin (con 1 minuto de margen)
+            // Solo marcar como expirada si YA PASÓ el horario de fin (con margen de 1 minuto)
             if (now > slotEndTime.AddMinutes(1))
             {
                 reservation.Status = ReservationStatus.Expired;
@@ -77,7 +84,7 @@ public class ReservationExpirationService : BackgroundService
             }
             else
             {
-                _logger.LogInformation($"[EXPIRATION SERVICE] - Reservación {reservation.Id} aún está ACTIVA");
+                _logger.LogInformation($"[EXPIRATION SERVICE] - Reservación {reservation.Id} aún está ACTIVA (falta {(slotEndTime - now).TotalMinutes:F1} min)");
             }
         }
 
