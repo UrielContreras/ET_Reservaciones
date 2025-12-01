@@ -90,11 +90,12 @@ public class UsersController : ControllerBase
         if (user == null)
             return NotFound("Usuario no encontrado.");
 
-        // Eliminar permanentemente el usuario de la base de datos
-        _db.Users.Remove(user);
+        // Desactivar el usuario en lugar de eliminarlo permanentemente
+        // Esto evita problemas con claves foráneas en Reservations
+        user.IsActive = false;
         await _db.SaveChangesAsync();
 
-        return Ok(new { Message = "Usuario eliminado exitosamente" });
+        return Ok(new { Message = "Usuario dado de baja exitosamente" });
     }
 
     [HttpPost("change-password")]

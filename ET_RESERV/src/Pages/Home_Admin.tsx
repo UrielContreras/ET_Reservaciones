@@ -126,13 +126,17 @@ const HomeAdmin = () => {
     if (!userToDelete) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/users/${userToDelete.id}`);
+      const response = await axios.delete(`${API_BASE_URL}/api/users/${userToDelete.id}`);
+      console.log('Usuario eliminado exitosamente:', response.data);
       setShowDeleteModal(false);
       setUserToDelete(null);
       loadUsers(); // Recargar la lista de usuarios
-    } catch (error) {
-      console.error('Error al dar de baja usuario:', error);
-      alert('Error al dar de baja el usuario. Por favor intenta de nuevo.');
+    } catch (error: any) {
+      console.error('Error completo al dar de baja usuario:', error);
+      console.error('Respuesta del servidor:', error.response?.data);
+      console.error('Status:', error.response?.status);
+      const errorMessage = error.response?.data?.message || error.response?.data || 'Error al dar de baja el usuario. Por favor intenta de nuevo.';
+      alert(`Error: ${errorMessage}`);
     }
   };
   const cancelDelete = () => {
