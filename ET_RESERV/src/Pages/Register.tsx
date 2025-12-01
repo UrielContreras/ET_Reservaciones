@@ -20,10 +20,46 @@ const Register = ({ onClose }: RegisterProps) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Genera contraseña en formato: PrimerLetraNombre.PrimeraLetraApellido.RestoDelApellido
+  const generatePassword = (firstName: string, lastName: string): string => {
+    if (!firstName || !lastName) return '';
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    const restOfLastName = lastName.substring(1).toLowerCase();
+    return `${firstInitial}.${lastInitial}.${restOfLastName}`;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Capitalizar la primera letra para los campos firstName y lastName
+    let processedValue = value;
+    if (name === 'firstName' || name === 'lastName') {
+      processedValue = value.charAt(0).toUpperCase() + value.slice(1);
+      
+      // Auto-generar contraseña cuando ambos campos estén completos
+      const updatedFormData = {
+        ...formData,
+        [name]: processedValue
+      };
+      
+      const firstName = name === 'firstName' ? processedValue : formData.firstName;
+      const lastName = name === 'lastName' ? processedValue : formData.lastName;
+      
+      if (firstName && lastName) {
+        const generatedPassword = generatePassword(firstName, lastName);
+        setFormData({
+          ...updatedFormData,
+          password: generatedPassword,
+          confirmPassword: generatedPassword
+        });
+        return;
+      }
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: processedValue
     });
   };
 
@@ -48,10 +84,7 @@ const Register = ({ onClose }: RegisterProps) => {
         role: formData.userType === 'admin' ? 1 : 0
       });
 
-      setSuccessMessage('¡Registro exitoso! Redirigiendo...');
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      setSuccessMessage(`¡Registro exitoso! La contraseña temporal asignada es: "${formData.password}". Por favor, compártela con el usuario creado.`);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data) {
         setError(err.response.data);
@@ -146,32 +179,17 @@ const Register = ({ onClose }: RegisterProps) => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-            />
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            color: '#0369a1',
+            fontSize: '0.9rem',
+            marginBottom: '1rem'
+          }}>
+            <strong>📌 Nota:</strong> La contraseña se generará automáticamente basada en el nombre y apellido (formato: PrimerLetra.PrimeraLetraApellido.RestoDelApellido). Puedes modificarla si lo deseas.
           </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar contraseña</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
           {error && <div className="error-message">{error}</div>}
           {successMessage && <div className="success-message">{successMessage}</div>}
 
