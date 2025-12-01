@@ -48,19 +48,27 @@ public class ReservationExpirationService : BackgroundService
 
         _logger.LogInformation($"[EXPIRATION SERVICE] Verificando expiración. Hora actual: {now:yyyy-MM-dd HH:mm:ss}");
 
-        // Buscar reservaciones activas de cualquier fecha que ya hayan terminado
+        // Buscar reservaciones activas o en progreso
         var activeReservations = await db.Reservations
             .Include(r => r.TimeSlot)
-            .Where(r => r.Status == ReservationStatus.Active)
+            .Where(r => r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation($"[EXPIRATION SERVICE] Encontradas {activeReservations.Count} reservaciones activas");
+        _logger.LogInformation($"[EXPIRATION SERVICE] Encontradas {activeReservations.Count} reservaciones activas/en progreso");
 
         var updated = 0;
         foreach (var reservation in activeReservations)
         {
-            // Crear la hora de fin completa: fecha de la reservación + hora de fin del slot
+            // Crear la hora de inicio y fin completa
             var reservationDate = reservation.Date.ToDateTime(TimeOnly.MinValue);
+            var slotStartTime = new DateTime(
+                reservationDate.Year, 
+                reservationDate.Month, 
+                reservationDate.Day,
+                reservation.TimeSlot.StartTime.Hours,
+                reservation.TimeSlot.StartTime.Minutes,
+                reservation.TimeSlot.StartTime.Seconds
+            );
             var slotEndTime = new DateTime(
                 reservationDate.Year, 
                 reservationDate.Month, 
@@ -72,19 +80,34 @@ public class ReservationExpirationService : BackgroundService
             
             _logger.LogInformation($"[EXPIRATION SERVICE] Reservación {reservation.Id}: Fecha={reservation.Date}, " +
                 $"Horario={reservation.TimeSlot.StartTime:hh\\:mm}-{reservation.TimeSlot.EndTime:hh\\:mm}, " +
-                $"Fin calculado={slotEndTime:yyyy-MM-dd HH:mm:ss}, Ahora={now:yyyy-MM-dd HH:mm:ss}, " +
-                $"Diferencia={(slotEndTime - now).TotalMinutes:F1} minutos");
+                $"Inicio={slotStartTime:yyyy-MM-dd HH:mm:ss}, Fin={slotEndTime:yyyy-MM-dd HH:mm:ss}, " +
+                $"Ahora={now:yyyy-MM-dd HH:mm:ss}, Status actual={reservation.Status}");
             
-            // Solo marcar como expirada si YA PASÓ el horario de fin (con margen de 1 minuto)
+            // Si ya pasó el horario de fin, marcar como expirada
             if (now > slotEndTime.AddMinutes(1))
             {
-                reservation.Status = ReservationStatus.Expired;
-                updated++;
-                _logger.LogInformation($"[EXPIRATION SERVICE] ✓ Reservación {reservation.Id} MARCADA como expirada");
+                if (reservation.Status != ReservationStatus.Expired)
+                {
+                    reservation.Status = ReservationStatus.Expired;
+                    updated++;
+                    _logger.LogInformation($"[EXPIRATION SERVICE] ✓ Reservación {reservation.Id} MARCADA como EXPIRADA");
+                }
             }
+            // Si ya comenzó pero no ha terminado, marcar como en progreso
+            else if (now >= slotStartTime && now <= slotEndTime)
+            {
+                if (reservation.Status != ReservationStatus.InProgress)
+                {
+                    reservation.Status = ReservationStatus.InProgress;
+                    updated++;
+                    _logger.LogInformation($"[EXPIRATION SERVICE] ✓ Reservación {reservation.Id} MARCADA como EN PROGRESO");
+                }
+            }
+            // Si aún no comienza, mantener como activa
             else
             {
-                _logger.LogInformation($"[EXPIRATION SERVICE] - Reservación {reservation.Id} aún está ACTIVA (falta {(slotEndTime - now).TotalMinutes:F1} min)");
+                var minutesUntilStart = (slotStartTime - now).TotalMinutes;
+                _logger.LogInformation($"[EXPIRATION SERVICE] - Reservación {reservation.Id} aún está ACTIVA (comienza en {minutesUntilStart:F1} min)");
             }
         }
 

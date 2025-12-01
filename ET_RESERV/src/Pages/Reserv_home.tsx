@@ -229,7 +229,7 @@ const ReservHome = () => {
         <div className="dashboard-card" style={{ minWidth: 220 }}>
         <div className="card-icon"><ClockIcon size={32} color="#667eea" /></div>
         <h3>Pendientes</h3>
-        <p className="card-number">{allReservations.filter(r => r.status === 'Active').length}</p>
+        <p className="card-number">{allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').length}</p>
         <button className="btn-card" onClick={() => setShowPending(true)}>Revisar</button>
         </div>
 
@@ -268,12 +268,14 @@ const ReservHome = () => {
                 <div className="reservation-actions">
                   <span className={`reservation-status ${
                     reservation.status === 'Active' ? 'status-active' :
+                    reservation.status === 'InProgress' ? 'status-inprogress' :
                     reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
                   }`}>
                     {reservation.status === 'Active' ? 'Activa' :
+                     reservation.status === 'InProgress' ? 'En Curso' :
                      reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
                   </span>
-                  {reservation.status === 'Active' && (
+                  {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
                     <button 
                       className="btn-cancel"
                       onClick={() => handleCancelReservation(reservation.id)}
@@ -342,16 +344,16 @@ const ReservHome = () => {
           <button className="modal-close" onClick={() => setShowPending(false)}>&times;</button>
           <div className="auth-header">
             <h1>Reservaciones Pendientes</h1>
-            <p>Reservaciones activas que aún no han sido utilizadas</p>
+            <p>Reservaciones activas o en curso</p>
           </div>
           <div className="modal-content">
-            {allReservations.filter(r => r.status === 'Active').length === 0 ? (
+            {allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').length === 0 ? (
               <div className="empty-state">
                 <p>No tienes reservaciones pendientes</p>
               </div>
             ) : (
               <div className="reservations-list">
-                {allReservations.filter(r => r.status === 'Active').map((reservation) => (
+                {allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').map((reservation) => (
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">

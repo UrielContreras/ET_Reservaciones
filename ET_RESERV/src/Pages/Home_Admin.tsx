@@ -328,6 +328,7 @@ const HomeAdmin = () => {
                       <td>
                         <span className={`role-badge ${reservation.status.toLowerCase()}`}>
                           {reservation.status === 'Active' ? 'Activa' : 
+                           reservation.status === 'InProgress' ? 'En Curso' :
                            reservation.status === 'Cancelled' ? 'Cancelada' : 
                            reservation.status === 'Expired' ? 'Expirada' : 
                            reservation.status === 'Completed' ? 'Completada' : reservation.status}
