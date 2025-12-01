@@ -22,4 +22,3 @@ public class UpdateUserRequest
     public string Email { get; set; } = null!;
     public string Area { get; set; } = null!;
 }
-}

@@ -132,7 +132,6 @@ const HomeAdmin = () => {
       alert('Error al dar de baja el usuario. Por favor intenta de nuevo.');
     }
   };
-
   const cancelDelete = () => {
     setShowDeleteModal(false);
     setUserToDelete(null);
