@@ -1,4 +1,6 @@
 import '../Styles/Home.css';
+import { StarIcon, SecureIcon, PhoneIcon } from '../components/Icons';
+
 
 const Home = () => {
   return (
@@ -31,17 +33,17 @@ const Home = () => {
 
       <section className="features">
         <div className="feature-card">
-          <div className="feature-icon">⚡</div>
+          <div className="card-icon"><StarIcon size={32} color="#667eea" /></div>
           <h3>Rápido</h3>
           <p>Reserva en menos de un minuto</p>
         </div>
         <div className="feature-card">
-          <div className="feature-icon">🔒</div>
+          <div className="card-icon"><SecureIcon size={32} color="#667eea" /></div>
           <h3>Seguro</h3>
           <p>Tus datos están protegidos</p>
         </div>
         <div className="feature-card">
-          <div className="feature-icon">📱</div>
+          <div className="card-icon"><PhoneIcon size={32} color="#667eea" /></div>
           <h3>Accesible</h3>
           <p>Desde cualquier dispositivo</p>
         </div>

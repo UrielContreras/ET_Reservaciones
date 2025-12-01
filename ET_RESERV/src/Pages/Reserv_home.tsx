@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import CreateReserv from './Create_reserv';
 import ChangePassword from './ChangePassword';
+import { CalendarIcon, ClockIcon, PlusIcon, CheckIcon } from '../components/Icons';
 
 interface Reservation {
   id: number;
@@ -204,28 +205,28 @@ const ReservHome = () => {
         }}
       >
         <div className="dashboard-card" style={{ minWidth: 220 }}>
-        <div className="card-icon">📅</div>
+        <div className="card-icon"><CalendarIcon size={32} color="#667eea" /></div>
         <h3>Mis Reservaciones</h3>
         <p className="card-number">{allReservations.length}</p>
         <button className="btn-card" onClick={() => setShowMyReservations(true)}>Ver todas</button>
         </div>
 
         <div className="dashboard-card" style={{ minWidth: 220 }}>
-        <div className="card-icon">➕</div>
+        <div className="card-icon"><PlusIcon size={32} color="#667eea" /></div>
         <h3>Nueva Reservación</h3>
         <p className="card-text">Crea una nueva reservación</p>
         <button className="btn-card primary" onClick={() => setShowCreateReserv(true)}>Crear</button>
         </div>
 
         <div className="dashboard-card" style={{ minWidth: 220 }}>
-        <div className="card-icon">🕐</div>
+        <div className="card-icon"><ClockIcon size={32} color="#667eea" /></div>
         <h3>Pendientes</h3>
         <p className="card-number">{allReservations.filter(r => r.status === 'Active').length}</p>
         <button className="btn-card" onClick={() => setShowPending(true)}>Revisar</button>
         </div>
 
         <div className="dashboard-card" style={{ minWidth: 220 }}>
-        <div className="card-icon">✅</div>
+        <div className="card-icon"><CheckIcon size={32} color="#667eea" /></div>
         <h3>Completadas</h3>
         <p className="card-number">{allReservations.filter(r => r.status === 'Cancelled' || r.status === 'Expired').length}</p>
         <button className="btn-card" onClick={() => setShowCompleted(true)}>Ver historial</button>
@@ -249,11 +250,11 @@ const ReservHome = () => {
               <div key={reservation.id} className="reservation-card">
                 <div className="reservation-info">
                   <div className="reservation-time">
-                    <span className="time-icon">🕐</span>
+                    <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
                   <span className="time-text">{reservation.timeRange}</span>
                   </div>
                   <div className="reservation-date">
-                    <span>📅 {formatDate(reservation.date)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
                   </div>
                 </div>
                 <div className="reservation-actions">
@@ -303,11 +304,11 @@ const ReservHome = () => {
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">
-                        <span className="time-icon">🕐</span>
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {formatDate(reservation.date)}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className={`reservation-status ${
@@ -346,11 +347,11 @@ const ReservHome = () => {
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">
-                        <span className="time-icon">🕐</span>
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {formatDate(reservation.date)}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className="reservation-status status-pending">Pendiente</span>
@@ -383,11 +384,11 @@ const ReservHome = () => {
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">
-                        <span className="time-icon">🕐</span>
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {formatDate(reservation.date)}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className={`reservation-status ${reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'}`}>

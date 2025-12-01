@@ -6,6 +6,7 @@ import Register from './Register';
 import CreateReserv from './Create_reserv';
 import UpdateUsers from './Update_users';
 import ChangePassword from './ChangePassword';
+import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon } from '../components/Icons';
 
 
 interface User {
@@ -147,7 +148,7 @@ const HomeAdmin = () => {
           <h2>ET Reservaciones - Panel Admin</h2>
         </div>
         <div className="nav-user">
-          <span className="admin-badge">👔 Administrador RH</span>
+          <span className="admin-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><BriefcaseIcon size={18} color="#667eea" /> Administrador RH</span>
           <button
             onClick={() => setShowChangePassword(true)}
             className="btn-logout"
@@ -175,27 +176,27 @@ const HomeAdmin = () => {
 
         <div className="reserv-dashboard">
           <div className="dashboard-card">
-            <div className="card-icon">📊</div>
+            <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
             <h3>Total Reservaciones</h3>
             <p className="card-number">{reservations.length}</p>
             <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
           </div>
 
           <div className="dashboard-card">
-            <div className="card-icon">👥</div>
+            <div className="card-icon"><UsersIcon size={32} color="#667eea" /></div>
             <h3>Total de Usuarios</h3>
             <p className="card-number">{users.length}</p>
             <button className="btn-card" onClick={() => setShowView('users')}>Gestionar</button>
           </div>
 
           <div className="dashboard-card">
-            <div className="card-icon">➕</div>
+            <div className="card-icon"><PlusIcon size={32} color="#667eea" /></div>
             <h3>Nuevo Usuario</h3>
             <p className="card-text">Crear usuario manualmente</p>
             <button className="btn-card primary" onClick={() => setShowRegister(true)}>Crear</button>
           </div>
            <div className="dashboard-card">
-            <div className="card-icon">➕</div>
+            <div className="card-icon"><PlusIcon size={32} color="#667eea" /></div>
             <h3>Nueva Reservacion</h3>
             <p className="card-text">Crea una nueva reservación</p>
             <button className="btn-card primary" onClick={() => setShowCreateReserv(true)}>Crear</button>
@@ -247,14 +248,14 @@ const HomeAdmin = () => {
                           title="Editar usuario"
                           style={{ marginRight: '8px' }}
                         >
-                          ✏️
+                          <EditIcon size={18} color="white" />
                         </button>
                         <button 
                           className="btn-delete"
                           onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}
                           title="Dar de baja usuario"
                         >
-                          🗑️ 
+                          <TrashIcon size={18} color="white" />
                         </button>
                       </td>
                     </tr>

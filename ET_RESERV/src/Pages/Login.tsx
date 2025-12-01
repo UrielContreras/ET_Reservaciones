@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Auth.css';
+import RegisterEmployee from './Register_employee';
 
 interface LoginProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState<'empleado' | 'admin'>('empleado');
   const [error, setError] = useState<string | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +103,11 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
             Iniciar Sesión
           </button>
         </form>
-
-      
+        <div className="auth-footer">
+          <p>¿No tienes una cuenta? <a href="#" onClick={(e) => { e.preventDefault(); setShowRegister(true); }}>Regístrate</a></p>
+        </div>
       </div>
+      {showRegister && <RegisterEmployee onClose={() => setShowRegister(false)} />}
     </div>
   );
 };
