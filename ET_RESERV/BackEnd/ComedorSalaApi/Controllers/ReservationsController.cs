@@ -56,31 +56,23 @@ public class ReservationsController : ControllerBase
         var now = DateTime.Now;
         var userId = GetCurrentUserId();
 
-        // Primero actualizar las reservaciones expiradas
-        var activeReservations = await _db.Reservations
-            .Include(r => r.TimeSlot)
-            .Where(r => r.UserId == userId && r.Date == today && r.Status == ReservationStatus.Active)
-            .ToListAsync();
+        Console.WriteLine($"[TODAY] Hora actual del servidor: {now:yyyy-MM-dd HH:mm:ss}");
 
-        foreach (var reservation in activeReservations)
-        {
-            var slotEndTime = DateTime.Today + reservation.TimeSlot.EndTime;
-            if (now > slotEndTime)
-            {
-                reservation.Status = ReservationStatus.Expired;
-            }
-        }
+        // NO actualizar automáticamente las expiradas aquí
+        // El servicio de background se encargará de eso
 
-        if (activeReservations.Any(r => r.Status == ReservationStatus.Expired))
-        {
-            await _db.SaveChangesAsync();
-        }
-
-        // Luego obtener todas las reservaciones del día
+        // Obtener TODAS las reservaciones del día (incluyendo activas, canceladas y expiradas)
         var reservations = await _db.Reservations
             .Include(r => r.TimeSlot)
             .Where(r => r.UserId == userId && r.Date == today)
+            .OrderBy(r => r.TimeSlot.StartTime)
             .ToListAsync();
+
+        foreach (var r in reservations)
+        {
+            var slotEndTime = DateTime.Today.Add(r.TimeSlot.EndTime);
+            Console.WriteLine($"[TODAY] Reservación {r.Id}: {r.TimeSlot.StartTime:hh\\:mm}-{r.TimeSlot.EndTime:hh\\:mm}, Status: {r.Status}, EndTime: {slotEndTime:HH:mm:ss}");
+        }
 
         var result = reservations.Select(r => new ReservationDto
         {
@@ -102,25 +94,9 @@ public class ReservationsController : ControllerBase
         var today = DateOnly.FromDateTime(DateTime.Today);
         var userId = GetCurrentUserId();
 
-        // Actualizar las reservaciones activas que ya expiraron
-        var activeReservations = await _db.Reservations
-            .Include(r => r.TimeSlot)
-            .Where(r => r.UserId == userId && r.Status == ReservationStatus.Active)
-            .ToListAsync();
+        Console.WriteLine($"[MY-RESERVATIONS] Hora actual del servidor: {now:yyyy-MM-dd HH:mm:ss}");
 
-        foreach (var reservation in activeReservations)
-        {
-            var slotEndTime = reservation.Date.ToDateTime(TimeOnly.MinValue) + reservation.TimeSlot.EndTime;
-            if (now > slotEndTime)
-            {
-                reservation.Status = ReservationStatus.Expired;
-            }
-        }
-
-        if (activeReservations.Any(r => r.Status == ReservationStatus.Expired))
-        {
-            await _db.SaveChangesAsync();
-        }
+        // NO actualizar automáticamente, dejar que el servicio de background lo haga
 
         // Obtener todas las reservaciones
         var reservations = await _db.Reservations
@@ -252,5 +228,48 @@ public class ReservationsController : ControllerBase
         });
 
         return Ok(result);
+    }
+
+    // Endpoint temporal para corregir reservaciones marcadas incorrectamente como expiradas
+    [HttpPost("fix-today-reservations")]
+    public async Task<IActionResult> FixTodayReservations()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = DateTime.Now;
+
+        Console.WriteLine($"[FIX] Iniciando corrección. Hora actual: {now:yyyy-MM-dd HH:mm:ss}");
+
+        // Buscar todas las reservaciones de hoy que están marcadas como expiradas
+        var expiredToday = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Where(r => r.Date == today && r.Status == ReservationStatus.Expired)
+            .ToListAsync();
+
+        Console.WriteLine($"[FIX] Encontradas {expiredToday.Count} reservaciones expiradas hoy");
+
+        var correctedCount = 0;
+        foreach (var reservation in expiredToday)
+        {
+            var slotEndTime = DateTime.Today.Add(reservation.TimeSlot.EndTime);
+            
+            Console.WriteLine($"[FIX] Reservación {reservation.Id}: Fin={slotEndTime:HH:mm:ss}, Ahora={now:HH:mm:ss}");
+            
+            // Si el horario AÚN NO ha terminado, reactivar la reservación
+            if (now <= slotEndTime)
+            {
+                reservation.Status = ReservationStatus.Active;
+                correctedCount++;
+                Console.WriteLine($"[FIX] ✓ Reservación {reservation.Id} REACTIVADA");
+            }
+        }
+
+        if (correctedCount > 0)
+        {
+            await _db.SaveChangesAsync();
+            Console.WriteLine($"[FIX] Se guardaron {correctedCount} correcciones");
+            return Ok(new { message = $"Se corrigieron {correctedCount} reservaciones", hora_actual = now.ToString("HH:mm:ss"), total_expiradas = expiredToday.Count });
+        }
+
+        return Ok(new { message = "No hay reservaciones para corregir", hora_actual = now.ToString("HH:mm:ss"), total_expiradas = expiredToday.Count });
     }
 }

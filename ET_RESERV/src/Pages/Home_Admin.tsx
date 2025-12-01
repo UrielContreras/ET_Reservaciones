@@ -3,6 +3,9 @@ import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import Register from './Register';
+import CreateReserv from './Create_reserv';
+import UpdateUsers from './Update_users';
+
 
 interface User {
   id: number;
@@ -25,13 +28,35 @@ interface Reservation {
 
 const HomeAdmin = () => {
   const [showRegister, setShowRegister] = useState(false);
+  const [showCreateReserv, setShowCreateReserv] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpdateUser, setShowUpdateUser] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [showView, setShowView] = useState<'users' | 'reservations'>('users');
+
+  // Función para formatear fecha sin problemas de zona horaria
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-MX');
+  };
+
+  // Función para verificar si una fecha es hoy
+  const isToday = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    const reservationDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    reservationDate.setHours(0, 0, 0, 0);
+    return reservationDate.getTime() === today.getTime();
+  };
+
+  // Filtrar solo las reservaciones de hoy
+  const todayReservations = reservations.filter(r => isToday(r.date));
 
   const loadUsers = async () => {
     try {
@@ -73,9 +98,25 @@ const HomeAdmin = () => {
     loadUsers(); // Recargar usuarios después de crear uno nuevo
   };
 
+  const handleCreateReservClose = () => {
+    setShowCreateReserv(false);
+    loadReservations(); // Recargar reservaciones después de crear una nueva
+  };
+
   const handleDeleteUser = (userId: number, userName: string) => {
     setUserToDelete({ id: userId, name: userName });
     setShowDeleteModal(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setUserToEdit(user);
+    setShowUpdateUser(true);
+  };
+
+  const handleUpdateUserClose = () => {
+    setShowUpdateUser(false);
+    setUserToEdit(null);
+    loadUsers(); // Recargar usuarios después de actualizar
   };
 
   const confirmDelete = async () => {
@@ -134,7 +175,7 @@ const HomeAdmin = () => {
 
           <div className="dashboard-card">
             <div className="card-icon">👥</div>
-            <h3>Usuarios Activos</h3>
+            <h3>Total de Usuarios</h3>
             <p className="card-number">{users.length}</p>
             <button className="btn-card" onClick={() => setShowView('users')}>Gestionar</button>
           </div>
@@ -144,6 +185,12 @@ const HomeAdmin = () => {
             <h3>Nuevo Usuario</h3>
             <p className="card-text">Crear usuario manualmente</p>
             <button className="btn-card primary" onClick={() => setShowRegister(true)}>Crear</button>
+          </div>
+           <div className="dashboard-card">
+            <div className="card-icon">➕</div>
+            <h3>Nueva Reservacion</h3>
+            <p className="card-text">Crea una nueva reservación</p>
+            <button className="btn-card primary" onClick={() => setShowCreateReserv(true)}>Crear</button>
           </div>
 
         </div>
@@ -187,6 +234,14 @@ const HomeAdmin = () => {
                       </td>
                       <td>
                         <button 
+                          className="btn-edit"
+                          onClick={() => handleEditUser(user)}
+                          title="Editar usuario"
+                          style={{ marginRight: '8px' }}
+                        >
+                          ✏️
+                        </button>
+                        <button 
                           className="btn-delete"
                           onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}
                           title="Dar de baja usuario"
@@ -205,15 +260,15 @@ const HomeAdmin = () => {
 
         {showView === 'reservations' && (
           <section className="recent-section">
-          <h2>Todas las Reservaciones del Sistema</h2>
+          <h2>Reservaciones de Hoy</h2>
           {loadingReservations ? (
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
-          ) : reservations.length === 0 ? (
+          ) : todayReservations.length === 0 ? (
             <div className="empty-state">
-              <p>No hay reservaciones registradas</p>
-              <span>Las reservaciones aparecerán aquí</span>
+              <p>No hay reservaciones para hoy</p>
+              <span>Las reservaciones de hoy aparecerán aquí</span>
             </div>
           ) : (
             <div className="table-container">
@@ -229,12 +284,12 @@ const HomeAdmin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {reservations.map((reservation) => (
+                  {todayReservations.map((reservation) => (
                     <tr key={reservation.id}>
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>
                       <td>{reservation.area || 'N/A'}</td>
-                      <td>{new Date(reservation.date).toLocaleDateString('es-MX')}</td>
+                      <td>{formatDate(reservation.date)}</td>
                       <td>{reservation.timeRange}</td>
                       <td>
                         <span className={`role-badge ${reservation.status.toLowerCase()}`}>
@@ -255,6 +310,8 @@ const HomeAdmin = () => {
       </div>
     </div>
     {showRegister && <Register onClose={handleRegisterClose} />}
+    {showCreateReserv && <CreateReserv onClose={handleCreateReservClose} />}
+    {showUpdateUser && userToEdit && <UpdateUsers onClose={handleUpdateUserClose} user={userToEdit} />}
     
     {showDeleteModal && userToDelete && (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && cancelDelete()}>

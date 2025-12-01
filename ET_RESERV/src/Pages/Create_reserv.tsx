@@ -85,7 +85,7 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
 
         setTimeSlots(response.data);
         setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching timeslots:', err);
         setError('Error al cargar los horarios disponibles');
         setLoading(false);
@@ -131,16 +131,20 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Reservation failed:', err);
       
-      if (err.response?.status === 403) {
-        setError('No tienes permisos para crear reservaciones. Asegúrate de estar registrado como empleado.');
-      } else if (err.response?.status === 400) {
-        const errorMsg = err.response?.data || 'Error al crear la reservación';
-        setError(errorMsg);
-      } else if (err.response?.data) {
-        setError(typeof err.response.data === 'string' ? err.response.data : 'Error al crear la reservación');
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 403) {
+          setError('No tienes permisos para crear reservaciones. Asegúrate de estar registrado como empleado.');
+        } else if (err.response?.status === 400) {
+          const errorMsg = err.response?.data || 'Error al crear la reservación';
+          setError(errorMsg);
+        } else if (err.response?.data) {
+          setError(typeof err.response.data === 'string' ? err.response.data : 'Error al crear la reservación');
+        } else {
+          setError('Error al crear la reservación. Por favor intenta de nuevo.');
+        }
       } else {
         setError('Error al crear la reservación. Por favor intenta de nuevo.');
       }

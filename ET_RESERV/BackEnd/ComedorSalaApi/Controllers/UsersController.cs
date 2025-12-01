@@ -88,4 +88,36 @@ public class UsersController : ControllerBase
 
         return Ok(new { Message = "Usuario eliminado exitosamente" });
     }
+
+    [HttpPut("{id:int}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null)
+            return NotFound("Usuario no encontrado.");
+
+        // Verificar si el email ya existe en otro usuario
+        if (await _db.Users.AnyAsync(u => u.Email == request.Email && u.Id != id))
+            return BadRequest("Ya existe otro usuario con ese correo.");
+
+        // Actualizar solo los campos permitidos
+        user.FirstName = request.FirstName;
+        user.LastName = request.LastName;
+        user.Email = request.Email;
+        user.Area = request.Area;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { 
+            Message = "Usuario actualizado exitosamente",
+            User = new {
+                user.Id,
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                user.Area
+            }
+        });
+    }
 }

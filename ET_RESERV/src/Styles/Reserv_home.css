@@ -342,6 +342,30 @@ html, body {
 }
 
 /* Action Buttons */
+.btn-edit {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-edit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.btn-edit:active {
+  transform: translateY(0);
+}
+
 .btn-delete {
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
