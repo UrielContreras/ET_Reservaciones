@@ -8,8 +8,6 @@ interface RegisterEmployeeProps {
 }
 
 const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
-  const DEFAULT_PASSWORD = 'ETIISI2025';
-  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,10 +17,27 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Genera contraseña en formato: PrimerLetraNombre.PrimeraLetraApellido.RestoDelApellido
+  const generatePassword = (firstName: string, lastName: string): string => {
+    if (!firstName || !lastName) return '';
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    const restOfLastName = lastName.substring(1).toLowerCase();
+    return `${firstInitial}.${lastInitial}.${restOfLastName}`;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    // Capitalizar la primera letra para los campos firstName y lastName
+    let processedValue = value;
+    if (name === 'firstName' || name === 'lastName') {
+      processedValue = value.charAt(0).toUpperCase() + value.slice(1);
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: processedValue
     });
   };
 
@@ -31,17 +46,19 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
     setError(null);
     setSuccessMessage(null);
 
+    const generatedPassword = generatePassword(formData.firstName, formData.lastName);
+
     try {
       await axios.post(`${API_BASE_URL}/api/auth/register`, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: DEFAULT_PASSWORD,
+        password: generatedPassword,
         area: formData.area,
         role: 0 // Siempre empleado (0)
       });
 
-      setSuccessMessage(`¡Registro exitoso! La contraseña temporal es: ${DEFAULT_PASSWORD}. El usuario debe cambiarla al iniciar sesión por primera vez.`);
+      setSuccessMessage(`¡Registro exitoso! La contraseña temporal es: ${generatedPassword}. El usuario debe cambiarla al iniciar sesión por primera vez.`);
       
       // Mantener el mensaje visible por más tiempo para que se pueda copiar la contraseña
       setTimeout(() => {
@@ -134,7 +151,7 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
             fontSize: '0.9rem',
             marginBottom: '1rem'
           }}>
-            <strong>📌 Nota:</strong> Se asignará la contraseña temporal <strong>{DEFAULT_PASSWORD}</strong> al nuevo empleado. El usuario deberá cambiarla al iniciar sesión por primera vez.
+            <strong>📌 Nota:</strong> Se generará automáticamente una contraseña temporal basada en el nombre y apellido (formato: PrimerLetra.PrimeraLetraApellido.RestoDelApellido). El usuario deberá cambiarla al iniciar sesión por primera vez.
           </div>
 
           {error && (
