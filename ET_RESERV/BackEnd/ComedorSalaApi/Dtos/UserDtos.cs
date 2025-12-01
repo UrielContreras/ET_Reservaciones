@@ -8,3 +8,9 @@ public class CreateEmployeeRequest
     public string Password { get; set; } = null!;
     public string? Area { get; set; }
 }
+
+public class ChangePasswordRequest
+{
+    public string CurrentPassword { get; set; } = null!;
+    public string NewPassword { get; set; } = null!;
+}

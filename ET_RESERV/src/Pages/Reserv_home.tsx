@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import CreateReserv from './Create_reserv';
+import ChangePassword from './ChangePassword';
 
 interface Reservation {
   id: number;
@@ -20,6 +21,7 @@ const ReservHome = () => {
   const [showMyReservations, setShowMyReservations] = useState(false);
   const [showPending, setShowPending] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     fetchMyReservations();
@@ -114,6 +116,13 @@ const ReservHome = () => {
         </div>
         <div className="nav-user">
           <span>Bienvenido</span>
+        <button
+            onClick={() => setShowChangePassword(true)}
+            className="btn-logout"
+            style={{ marginRight: '0.5rem', backgroundColor: '#ffffffff' }}
+        >
+            Cambiar Contraseña
+        </button>
         <button
             onClick={() => {
                 handleLogout();
@@ -334,6 +343,8 @@ const ReservHome = () => {
         </div>
       </div>
     )}
+    
+    {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
     </>
   );
 };
