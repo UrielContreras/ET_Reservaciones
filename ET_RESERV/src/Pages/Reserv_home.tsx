@@ -208,7 +208,7 @@ const ReservHome = () => {
             }}
             className="btn-logout"
         >
-            Cerrar Sesión
+            Cerrar Sesión|
         </button>
         </div>
       </nav>
@@ -319,8 +319,8 @@ const ReservHome = () => {
         <div className="auth-card" onClick={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={() => setShowMyReservations(false)}>&times;</button>
           <div className="auth-header">
-            <h1>Mis Reservaciones</h1>
-            <p>Todo tu historial de reservaciones</p>
+            <h1>Mis Últimas Reservaciones</h1>
+            <p>Tus reservaciones más recientes</p>
           </div>
           <div className="modal-content">
             {allReservations.length === 0 ? (
@@ -329,7 +329,7 @@ const ReservHome = () => {
               </div>
             ) : (
               <div className="reservations-list">
-                {allReservations.map((reservation) => (
+                {allReservations.slice(0, 5).map((reservation) => (
                   <div key={reservation.id} className="reservation-card">
                     <div className="reservation-info">
                       <div className="reservation-time">

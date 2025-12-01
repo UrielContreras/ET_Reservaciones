@@ -49,19 +49,6 @@ const HomeAdmin = () => {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-MX');
   };
 
-  // Función para verificar si una fecha es hoy
-  const isToday = (dateString: string) => {
-    const [year, month, day] = dateString.split('-');
-    const reservationDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    reservationDate.setHours(0, 0, 0, 0);
-    return reservationDate.getTime() === today.getTime();
-  };
-
-  // Filtrar solo las reservaciones de hoy
-  const todayReservations = reservations.filter(r => isToday(r.date));
-
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -313,15 +300,15 @@ const HomeAdmin = () => {
 
         {showView === 'reservations' && (
           <section className="recent-section">
-          <h2>Reservaciones de Hoy</h2>
+          <h2>Últimas 5 Reservaciones</h2>
           {loadingReservations ? (
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
-          ) : todayReservations.length === 0 ? (
+          ) : reservations.length === 0 ? (
             <div className="empty-state">
-              <p>No hay reservaciones para hoy</p>
-              <span>Las reservaciones de hoy aparecerán aquí</span>
+              <p>No hay reservaciones</p>
+              <span>Las reservaciones aparecerán aquí</span>
             </div>
           ) : (
             <div className="table-container">
@@ -337,7 +324,7 @@ const HomeAdmin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {todayReservations.map((reservation) => (
+                  {reservations.slice(0, 5).map((reservation) => (
                     <tr key={reservation.id}>
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>
