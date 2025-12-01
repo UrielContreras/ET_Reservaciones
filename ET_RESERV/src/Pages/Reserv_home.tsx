@@ -23,7 +23,54 @@ const ReservHome = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
+  // Función para formatear fecha sin problemas de zona horaria
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-MX');
+  };
+
+
+
   useEffect(() => {
+    const fetchMyReservations = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/reservations/today`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        console.log('[RESERV_HOME] Reservaciones de hoy recibidas:', response.data);
+        console.log('[RESERV_HOME] Cantidad:', response.data.length);
+        
+        setMyReservations(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching reservations:', err);
+        setLoading(false);
+      }
+    };
+
+    const fetchAllReservations = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/reservations/my-reservations`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setAllReservations(response.data);
+      } catch (err) {
+        console.error('Error fetching all reservations:', err);
+      }
+    };
+
     fetchMyReservations();
     fetchAllReservations();
   }, []);
@@ -39,6 +86,9 @@ const ReservHome = () => {
         }
       });
 
+      console.log('[FETCH_MY] Reservaciones de hoy recibidas:', response.data);
+      console.log('[FETCH_MY] Cantidad:', response.data.length);
+      
       setMyReservations(response.data);
       setLoading(false);
     } catch (err) {
@@ -85,8 +135,8 @@ const ReservHome = () => {
 
       alert('Reservación cancelada exitosamente');
       fetchMyReservations();
-    } catch (err: any) {
-      if (err.response?.data) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
         alert(err.response.data);
       } else {
         alert('Error al cancelar la reservación');
@@ -188,32 +238,40 @@ const ReservHome = () => {
           <div className="empty-state">
             <p>Cargando...</p>
           </div>
-        ) : myReservations.filter(r => r.status === 'Active').length === 0 ? (
+        ) : myReservations.length === 0 ? (
           <div className="empty-state">
-            <p>No hay reservaciones activas para hoy</p>
+            <p>No hay reservaciones para hoy</p>
             <span>Las reservaciones aparecerán aquí</span>
           </div>
         ) : (
           <div className="reservations-list">
-            {myReservations.filter(r => r.status === 'Active').map((reservation) => (
+            {myReservations.map((reservation) => (
               <div key={reservation.id} className="reservation-card">
                 <div className="reservation-info">
                   <div className="reservation-time">
                     <span className="time-icon">🕐</span>
-                    <span className="time-text">{reservation.timeRange}</span>
+                  <span className="time-text">{reservation.timeRange}</span>
                   </div>
                   <div className="reservation-date">
-                    <span>📅 {reservation.date}</span>
+                    <span>📅 {formatDate(reservation.date)}</span>
                   </div>
                 </div>
                 <div className="reservation-actions">
-                  <span className="reservation-status status-active">Activa</span>
-                  <button 
-                    className="btn-cancel"
-                    onClick={() => handleCancelReservation(reservation.id)}
-                  >
-                    Cancelar
-                  </button>
+                  <span className={`reservation-status ${
+                    reservation.status === 'Active' ? 'status-active' :
+                    reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                  }`}>
+                    {reservation.status === 'Active' ? 'Activa' :
+                     reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
+                  </span>
+                  {reservation.status === 'Active' && (
+                    <button 
+                      className="btn-cancel"
+                      onClick={() => handleCancelReservation(reservation.id)}
+                    >
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -249,7 +307,7 @@ const ReservHome = () => {
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {reservation.date}</span>
+                        <span>📅 {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className={`reservation-status ${
@@ -292,7 +350,7 @@ const ReservHome = () => {
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {reservation.date}</span>
+                        <span>📅 {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className="reservation-status status-pending">Pendiente</span>
@@ -329,7 +387,7 @@ const ReservHome = () => {
                         <span className="time-text">{reservation.timeRange}</span>
                       </div>
                       <div className="reservation-date">
-                        <span>📅 {reservation.date}</span>
+                        <span>📅 {formatDate(reservation.date)}</span>
                       </div>
                     </div>
                     <span className={`reservation-status ${reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'}`}>
