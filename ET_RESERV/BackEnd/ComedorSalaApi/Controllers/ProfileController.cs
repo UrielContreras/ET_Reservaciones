@@ -28,6 +28,26 @@ public class ProfileController : ControllerBase
         return int.Parse(sub!);
     }
 
+    [HttpGet("me")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var userId = GetCurrentUserId();
+        var user = await _db.Users.FindAsync(userId);
+        
+        if (user == null)
+            return NotFound("Usuario no encontrado.");
+
+        return Ok(new
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            Area = user.Area
+        });
+    }
+
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {

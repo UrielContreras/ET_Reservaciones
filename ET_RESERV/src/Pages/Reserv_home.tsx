@@ -23,6 +23,7 @@ const ReservHome = () => {
   const [showPending, setShowPending] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [userName, setUserName] = useState<string>('');
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -33,6 +34,23 @@ const ReservHome = () => {
 
 
   useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/profile/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setUserName(response.data.firstName);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
     const fetchMyReservations = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -72,6 +90,7 @@ const ReservHome = () => {
       }
     };
 
+    fetchUserProfile();
     fetchMyReservations();
     fetchAllReservations();
   }, []);
@@ -174,7 +193,7 @@ const ReservHome = () => {
           <h2>Reservaciones</h2>
         </div>
         <div className="nav-user">
-          <span>Bienvenido</span>
+          <span>Bienvenid@ {userName}</span>
         <button
             onClick={() => setShowChangePassword(true)}
             className="btn-logout"
