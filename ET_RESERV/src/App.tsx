@@ -15,6 +15,16 @@ function App() {
     return (localStorage.getItem('userType') as 'empleado' | 'admin') || 'empleado'
   })
 
+  // Prevenir navegación hacia atrás después de logout
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1)

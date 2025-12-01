@@ -91,9 +91,17 @@ const HomeAdmin = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userType');
+    // Limpiar completamente el localStorage
+    localStorage.clear();
+    
+    // Limpiar sessionStorage también
+    sessionStorage.clear();
+    
+    // Limpiar el hash
     window.location.hash = '';
+    
+    // Recargar la página sin caché
+    window.location.replace('/');
   };
 
   const handleRegisterClose = () => {
