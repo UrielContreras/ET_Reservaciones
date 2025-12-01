@@ -41,6 +41,7 @@ const HomeAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [showView, setShowView] = useState<'users' | 'reservations'>('users');
+  const [userName, setUserName] = useState<string>('');
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -85,9 +86,27 @@ const HomeAdmin = () => {
     }
   };
 
+  const loadUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/api/profile/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setUserName(response.data.firstName);
+    } catch (error) {
+      console.error('Error al cargar perfil del usuario:', error);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
     loadReservations();
+    loadUserProfile();
   }, []);
 
   const handleLogout = () => {
@@ -172,7 +191,7 @@ const HomeAdmin = () => {
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}
           >
-            <BriefcaseIcon size={18} color="#ffffff" /> Administrador RH
+            <BriefcaseIcon size={18} color="#ffffff" /> Bienvenid@ {userName}
           </span>
           <button
             onClick={() => setShowChangePassword(true)}
