@@ -13,6 +13,50 @@ interface TimeSlot {
   available: number;
 }
 
+// Función auxiliar para calcular el tiempo restante hasta el fin del horario
+const getTimeRemaining = (timeRange: string): string => {
+  const now = new Date();
+  const [startTime, endTime] = timeRange.split('-'); // Obtener inicio y fin
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = endTime.split(':').map(Number);
+  
+  const startDateTime = new Date();
+  startDateTime.setHours(startHours, startMinutes, 0, 0);
+  
+  const endDateTime = new Date();
+  endDateTime.setHours(endHours, endMinutes, 0, 0);
+  
+  // Si ya terminó el horario
+  if (now >= endDateTime) {
+    return 'Horario terminado';
+  }
+  
+  // Si aún no comienza
+  if (now < startDateTime) {
+    const diffMs = startDateTime.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 60) {
+      return `Inicia en ${diffMinutes} min`;
+    } else {
+      const hrs = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      return `Inicia en ${hrs}h ${mins}min`;
+    }
+  }
+  
+  // Si ya comenzó, mostrar tiempo restante
+  const diffMs = endDateTime.getTime() - now.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  
+  if (diffMinutes < 60) {
+    return `⏰ ${diffMinutes} min restantes`;
+  } else {
+    const hrs = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    return `⏰ ${hrs}h ${mins}min restantes`;
+  }
+};
+
 const CreateReserv = ({ onClose }: CreateReservProps) => {
   const [timeSlotId, setTimeSlotId] = useState<number | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -209,6 +253,7 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
                   <option value="">Seleccionar horario</option>
                   {timeSlots.map((slot) => {
                     const isDisabled = slot.available === 0;
+                    const timeRemaining = getTimeRemaining(slot.timeRange);
                     let colorClass = '';
                     if (slot.available > 3) colorClass = 'available-high';
                     else if (slot.available >= 2 && slot.available <= 3) colorClass = 'available-medium';
@@ -222,7 +267,7 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
                         disabled={isDisabled}
                         className={colorClass}
                       >
-                        {slot.timeRange} {isDisabled ? '(Sin disponibilidad)' : `(${slot.available} lugares disponibles)`}
+                        {slot.timeRange} - {isDisabled ? 'Sin disponibilidad' : `${slot.available} lugares`} | {timeRemaining}
                       </option>
                     );
                   })}
