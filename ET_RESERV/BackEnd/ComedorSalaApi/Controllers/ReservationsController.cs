@@ -42,7 +42,7 @@ public class ReservationsController : ControllerBase
             Available = CAPACIDAD - _db.Reservations.Count(r =>
                 r.Date == today &&
                 r.TimeSlotId == slot.Id &&
-                r.Status == ReservationStatus.Active)
+                (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress))
         });
 
         return Ok(result);
@@ -145,11 +145,11 @@ public class ReservationsController : ControllerBase
         if (now > slotEndToday)
             return BadRequest("Este horario ya terminó.");
 
-        // Validar 1 reserva por día (activa o completada)
+        // Validar 1 reserva por día (activa, en progreso o expirada)
         var existingReservation = await _db.Reservations.AnyAsync(r =>
             r.UserId == userId &&
             r.Date == today &&
-            (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.Expired));
+            (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress || r.Status == ReservationStatus.Expired));
 
         if (existingReservation)
             return BadRequest("Ya tienes una reservación para hoy. Solo puedes hacer una reservación por día.");
@@ -158,7 +158,7 @@ public class ReservationsController : ControllerBase
         var countActiveInSlot = await _db.Reservations.CountAsync(r =>
             r.Date == today &&
             r.TimeSlotId == request.TimeSlotId &&
-            r.Status == ReservationStatus.Active);
+            (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress));
 
         if (countActiveInSlot >= CAPACIDAD)
             return BadRequest("No hay lugares disponibles en este horario.");

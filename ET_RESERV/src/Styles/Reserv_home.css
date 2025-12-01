@@ -326,6 +326,12 @@ html, body {
   color: #155724;
 }
 
+.role-badge.inprogress {
+  background: #cfe2ff;
+  color: #084298;
+  font-weight: 600;
+}
+
 .role-badge.cancelled {
   background: #f8d7da;
   color: #721c24;
@@ -463,6 +469,12 @@ html, body {
 .status-active {
   background-color: #d4edda;
   color: #155724;
+}
+
+.status-inprogress {
+  background-color: #cfe2ff;
+  color: #084298;
+  font-weight: 600;
 }
 
 .status-pending {

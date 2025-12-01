@@ -2,9 +2,10 @@ namespace ComedorSalaApi.Models;
 
 public enum ReservationStatus
 {
-    Active = 0,
-    Cancelled = 1,
-    Expired = 2
+    Active = 0,      // Antes de que comience el horario
+    Cancelled = 1,   // Cancelada por el usuario
+    Expired = 2,     // Ya terminó el horario
+    InProgress = 3   // El horario ya comenzó pero aún no termina
 }
 
 public class Reservation
