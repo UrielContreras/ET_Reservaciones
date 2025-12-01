@@ -7,7 +7,7 @@ const Home = () => {
     <div className="home-container">
       <nav className="navbar">
         <div className="nav-brand">
-          <h2>ET Reservaciones</h2>
+          <h2> Reservaciones</h2>
         </div>
         <div className="nav-links">
           <a href="#login">Iniciar Sesión</a>

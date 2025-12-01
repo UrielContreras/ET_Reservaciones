@@ -145,14 +145,27 @@ const HomeAdmin = () => {
     <div className="reserv-container">
       <nav className="reserv-navbar">
         <div className="nav-brand">
-          <h2>ET Reservaciones - Panel Admin</h2>
+          <h2> Reservaciones - Panel Admin</h2>
         </div>
         <div className="nav-user">
-          <span className="admin-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><BriefcaseIcon size={18} color="#667eea" /> Administrador RH</span>
+          <span
+            className="admin-badge"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: '#ffffff', 
+              padding: '6px 10px',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}
+          >
+            <BriefcaseIcon size={18} color="#ffffff" /> Administrador RH
+          </span>
           <button
             onClick={() => setShowChangePassword(true)}
             className="btn-logout"
-            style={{ marginRight: '0.5rem', backgroundColor: '#ffffffff' }}
+            style={{ marginRight: '0.5rem' }}
           >
             Cambiar Contraseña
           </button>

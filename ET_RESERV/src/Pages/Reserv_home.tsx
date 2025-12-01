@@ -163,14 +163,14 @@ const ReservHome = () => {
     <div className="reserv-container">
       <nav className="reserv-navbar">
         <div className="nav-brand">
-          <h2>ET Reservaciones</h2>
+          <h2>Reservaciones</h2>
         </div>
         <div className="nav-user">
           <span>Bienvenido</span>
         <button
             onClick={() => setShowChangePassword(true)}
             className="btn-logout"
-            style={{ marginRight: '0.5rem', backgroundColor: '#ffffffff' }}
+            style={{ marginRight: '0.5rem' }}
         >
             Cambiar Contraseña
         </button>
