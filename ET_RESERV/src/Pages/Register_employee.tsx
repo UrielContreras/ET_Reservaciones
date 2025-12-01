@@ -58,7 +58,7 @@ const RegisterEmployee = ({ onClose }: RegisterEmployeeProps) => {
         role: 0 // Siempre empleado (0)
       });
 
-      setSuccessMessage(`¡Registro exitoso! La contraseña temporal es: ${generatedPassword}. El usuario debe cambiarla al iniciar sesión por primera vez.`);
+      setSuccessMessage(`¡Registro exitoso! La contraseña temporal es: "${generatedPassword}". El usuario debe cambiarla al iniciar sesión por primera vez.`);
       
       // Mantener el mensaje visible por más tiempo para que se pueda copiar la contraseña
       setTimeout(() => {
