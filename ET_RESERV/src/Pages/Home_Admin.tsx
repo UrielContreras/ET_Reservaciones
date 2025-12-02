@@ -6,7 +6,7 @@ import Register from './Register';
 import CreateReserv from './Create_reserv';
 import UpdateUsers from './Update_users';
 import ChangePassword from './ChangePassword';
-import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon } from '../components/Icons';
+import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon, CalendarIcon, ClockIcon } from '../components/Icons';
 
 
 interface User {
@@ -28,6 +28,14 @@ interface Reservation {
   area: string;
 }
 
+interface AdminReservation {
+  id: number;
+  date: string;
+  timeSlotId: number;
+  timeRange: string;
+  status: string;
+}
+
 const HomeAdmin = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [showCreateReserv, setShowCreateReserv] = useState(false);
@@ -42,6 +50,8 @@ const HomeAdmin = () => {
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [showView, setShowView] = useState<'users' | 'reservations'>('users');
   const [userName, setUserName] = useState<string>('');
+  const [myAdminReservations, setMyAdminReservations] = useState<AdminReservation[]>([]);
+  const [loadingAdminReservations, setLoadingAdminReservations] = useState(true);
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -90,10 +100,83 @@ const HomeAdmin = () => {
     }
   };
 
+  const loadAdminReservations = async () => {
+    try {
+      setLoadingAdminReservations(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('[ADMIN] No hay token');
+        return;
+      }
+
+      // Primero, verificar el rol del usuario
+      try {
+        const debugResponse = await axios.get(`${API_BASE_URL}/api/reservations/debug-user`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('[ADMIN] Info de usuario:', debugResponse.data);
+      } catch (err) {
+        console.error('[ADMIN] Error al obtener info del usuario:', err);
+      }
+
+      console.log('[ADMIN] Llamando a /api/reservations/today...');
+      const response = await axios.get(`${API_BASE_URL}/api/reservations/today`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log('[ADMIN] Reservaciones de hoy recibidas:', response.data);
+      console.log('[ADMIN] Cantidad de reservaciones:', response.data.length);
+      setMyAdminReservations(response.data);
+    } catch (error: any) {
+      console.error('[ADMIN] Error al cargar reservaciones:', error);
+      console.error('[ADMIN] Status:', error.response?.status);
+      console.error('[ADMIN] Data:', error.response?.data);
+      if (error.response?.status === 403) {
+        console.error('[ADMIN] Error 403: No tienes permisos. Necesitas cerrar sesión y volver a iniciar sesión.');
+      }
+    } finally {
+      setLoadingAdminReservations(false);
+    }
+  };
+
+  const handleCancelAdminReservation = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.post(
+        `${API_BASE_URL}/api/reservations/${id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Reservación cancelada exitosamente');
+      loadAdminReservations();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        alert(err.response.data);
+      } else {
+        alert('Error al cancelar la reservación');
+      }
+      console.error('Error al cancelar reservación:', err);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
     loadReservations();
     loadUserProfile();
+    loadAdminReservations();
   }, []);
 
   const handleLogout = () => {
@@ -118,6 +201,7 @@ const HomeAdmin = () => {
   const handleCreateReservClose = () => {
     setShowCreateReserv(false);
     loadReservations(); // Recargar reservaciones después de crear una nueva
+    loadAdminReservations(); // Recargar también las reservaciones del admin
   };
 
   const handleDeleteUser = (userId: number, userName: string) => {
@@ -234,6 +318,57 @@ const HomeAdmin = () => {
           </div>
 
         </div>
+
+        <section className="recent-section">
+          <h2>Mis Reservaciones de Hoy</h2>
+          {loadingAdminReservations ? (
+            <div className="empty-state">
+              <p>Cargando...</p>
+            </div>
+          ) : myAdminReservations.length === 0 ? (
+            <div className="empty-state">
+              <p>No hay reservaciones para hoy</p>
+              <span>Las reservaciones aparecerán aquí</span>
+            </div>
+          ) : (
+            <div className="reservations-list">
+              {myAdminReservations.map((reservation) => (
+                <div key={reservation.id} className="reservation-card">
+                  <div className="reservation-info">
+                    <div className="reservation-time">
+                      <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                      <span className="time-text">{reservation.timeRange}</span>
+                    </div>
+                    <div className="reservation-date">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="reservation-actions">
+                    <span className={`reservation-status ${
+                      reservation.status === 'Active' ? 'status-active' :
+                      reservation.status === 'InProgress' ? 'status-inprogress' :
+                      reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                    }`}>
+                      {reservation.status === 'Active' ? 'Activa' :
+                       reservation.status === 'InProgress' ? 'En Curso' :
+                       reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
+                    </span>
+                    {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
+                      <button 
+                        className="btn-cancel"
+                        onClick={() => handleCancelAdminReservation(reservation.id)}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {showView === 'users' && (
           <section className="recent-section">

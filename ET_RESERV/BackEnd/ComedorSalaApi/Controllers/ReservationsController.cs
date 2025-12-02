@@ -57,13 +57,15 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpGet("today")]
-    [Authorize(Roles = "Employee")]
+    [Authorize(Roles = "Employee,HR")]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyTodayReservation()
     {
         var now = GetMexicoTime();
         var today = DateOnly.FromDateTime(now);
         var userId = GetCurrentUserId();
-
+        
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        Console.WriteLine($"[TODAY] Usuario ID: {userId}, Rol: {userRole}, Fecha: {today}");
         Console.WriteLine($"[TODAY] Hora actual del servidor: {now:yyyy-MM-dd HH:mm:ss}");
 
         // NO actualizar automáticamente las expiradas aquí
@@ -92,6 +94,17 @@ public class ReservationsController : ControllerBase
         });
 
         return Ok(result);
+    }
+
+    [HttpGet("debug-user")]
+    [Authorize]
+    public IActionResult DebugUser()
+    {
+        var userId = GetCurrentUserId();
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        
+        return Ok(new { userId, userRole, allClaims });
     }
 
     [HttpGet("my-reservations")]
@@ -187,7 +200,7 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPost("{id:int}/cancel")]
-    [Authorize(Roles = "Employee")]
+    [Authorize(Roles = "Employee,HR")]
     public async Task<IActionResult> CancelReservation(int id)
     {
         var userId = GetCurrentUserId();
