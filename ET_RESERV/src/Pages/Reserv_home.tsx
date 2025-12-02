@@ -208,7 +208,7 @@ const ReservHome = () => {
             }}
             className="btn-logout"
         >
-            Cerrar Sesión|
+            Cerrar Sesión
         </button>
         </div>
       </nav>
