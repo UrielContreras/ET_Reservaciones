@@ -14,10 +14,12 @@ public class ReservationsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private const int CAPACIDAD = 5; // puedes pasar esto a configuración
+    private readonly TimeZoneInfo _mexicoTimeZone;
 
     public ReservationsController(AppDbContext db)
     {
         _db = db;
+        _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
     }
 
     private int GetCurrentUserId()
@@ -28,11 +30,17 @@ public class ReservationsController : ControllerBase
         return int.Parse(sub!);
     }
 
+    private DateTime GetMexicoTime()
+    {
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _mexicoTimeZone);
+    }
+
     [HttpGet("timeslots")]
     [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetAvailableTimeSlots()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
         var timeSlots = await _db.TimeSlots.Where(s => s.IsActive).OrderBy(s => s.StartTime).ToListAsync();
 
         var result = timeSlots.Select(slot => new
@@ -52,8 +60,8 @@ public class ReservationsController : ControllerBase
     [Authorize(Roles = "Employee")]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyTodayReservation()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var now = DateTime.Now;
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
         var userId = GetCurrentUserId();
 
         Console.WriteLine($"[TODAY] Hora actual del servidor: {now:yyyy-MM-dd HH:mm:ss}");
@@ -90,8 +98,8 @@ public class ReservationsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<IEnumerable<ReservationDto>>> GetMyAllReservations()
     {
-        var now = DateTime.Now;
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
         var userId = GetCurrentUserId();
 
         Console.WriteLine($"[MY-RESERVATIONS] Hora actual del servidor: {now:yyyy-MM-dd HH:mm:ss}");
@@ -121,12 +129,12 @@ public class ReservationsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> CreateReservation([FromBody] CreateReservationRequest request)
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var now = DateTime.Now;
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
         var userId = GetCurrentUserId();
 
         // Validar que sea después de las 10:00 AM
-        var cutoffTime = DateTime.Today.AddHours(10);
+        var cutoffTime = new DateTime(now.Year, now.Month, now.Day, 10, 0, 0);
         if (now < cutoffTime)
         {
             var minutesUntil10AM = (int)(cutoffTime - now).TotalMinutes;
@@ -141,7 +149,7 @@ public class ReservationsController : ControllerBase
         if (slot == null) return BadRequest("TimeSlot inválido.");
 
         // Validar que el slot no haya terminado
-        var slotEndToday = DateTime.Today + slot.EndTime;
+        var slotEndToday = new DateTime(now.Year, now.Month, now.Day).Add(slot.EndTime);
         if (now > slotEndToday)
             return BadRequest("Este horario ya terminó.");
 
@@ -169,7 +177,7 @@ public class ReservationsController : ControllerBase
             Date = today,
             TimeSlotId = request.TimeSlotId,
             Status = ReservationStatus.Active,
-            CreatedAt = DateTime.Now
+            CreatedAt = now
         };
 
         _db.Reservations.Add(reservation);
@@ -192,8 +200,8 @@ public class ReservationsController : ControllerBase
         if (reservation.Status != ReservationStatus.Active)
             return BadRequest("La reserva no está activa.");
 
-        var now = DateTime.Now;
-        var slotStartToday = DateTime.Today + reservation.TimeSlot.StartTime;
+        var now = GetMexicoTime();
+        var slotStartToday = new DateTime(now.Year, now.Month, now.Day).Add(reservation.TimeSlot.StartTime);
 
         // Aquí podrías poner una política tipo: no cancelar después de que empiece
         if (now > slotStartToday)
@@ -234,8 +242,8 @@ public class ReservationsController : ControllerBase
     [HttpPost("fix-today-reservations")]
     public async Task<IActionResult> FixTodayReservations()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var now = DateTime.Now;
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
 
         Console.WriteLine($"[FIX] Iniciando corrección. Hora actual: {now:yyyy-MM-dd HH:mm:ss}");
 
@@ -250,7 +258,7 @@ public class ReservationsController : ControllerBase
         var correctedCount = 0;
         foreach (var reservation in expiredToday)
         {
-            var slotEndTime = DateTime.Today.Add(reservation.TimeSlot.EndTime);
+            var slotEndTime = new DateTime(now.Year, now.Month, now.Day).Add(reservation.TimeSlot.EndTime);
             
             Console.WriteLine($"[FIX] Reservación {reservation.Id}: Fin={slotEndTime:HH:mm:ss}, Ahora={now:HH:mm:ss}");
             

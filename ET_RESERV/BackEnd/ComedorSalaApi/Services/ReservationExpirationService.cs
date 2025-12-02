@@ -8,6 +8,7 @@ public class ReservationExpirationService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ReservationExpirationService> _logger;
+    private readonly TimeZoneInfo _mexicoTimeZone;
 
     public ReservationExpirationService(
         IServiceProvider serviceProvider,
@@ -15,6 +16,12 @@ public class ReservationExpirationService : BackgroundService
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+    }
+
+    private DateTime GetMexicoTime()
+    {
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _mexicoTimeZone);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,8 +50,8 @@ public class ReservationExpirationService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var now = DateTime.Now;
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
 
         _logger.LogInformation($"[EXPIRATION SERVICE] Verificando expiración. Hora actual: {now:yyyy-MM-dd HH:mm:ss}");
 

@@ -8,6 +8,12 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar TimeZone de México
+var mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+TimeZoneInfo.ClearCachedData();
+Console.WriteLine($"[TIMEZONE] Zona horaria configurada: {mexicoTimeZone.Id}");
+Console.WriteLine($"[TIMEZONE] Hora actual en México: {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, mexicoTimeZone):yyyy-MM-dd HH:mm:ss}");
+
 // DB
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -48,7 +54,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",
-                "https://comedoret-afb0gheaegfkajdd.northcentralus-01.azurewebsites.net"
+                "comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
               )
               .AllowAnyHeader()
               .AllowAnyMethod();
