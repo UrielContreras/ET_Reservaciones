@@ -59,6 +59,15 @@ const HomeAdmin = () => {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-MX');
   };
 
+  // Función para obtener la fecha de hoy en formato YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -75,7 +84,10 @@ const HomeAdmin = () => {
     try {
       setLoadingReservations(true);
       const response = await axios.get(`${API_BASE_URL}/api/reservations/all`);
-      setReservations(response.data);
+      // Filtrar solo las reservaciones de hoy
+      const today = getTodayDate();
+      const todayReservations = response.data.filter((res: Reservation) => res.date === today);
+      setReservations(todayReservations);
     } catch (error) {
       console.error('Error al cargar reservaciones:', error);
     } finally {
@@ -292,7 +304,7 @@ const HomeAdmin = () => {
         <div className="reserv-dashboard">
           <div className="dashboard-card">
             <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
-            <h3>Total Reservaciones</h3>
+            <h3>Reservaciones de Hoy</h3>
             <p className="card-number">{reservations.length}</p>
             <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
           </div>
@@ -435,15 +447,15 @@ const HomeAdmin = () => {
 
         {showView === 'reservations' && (
           <section className="recent-section">
-          <h2>Últimas 5 Reservaciones</h2>
+          <h2>Todas las Reservaciones de Hoy</h2>
           {loadingReservations ? (
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
           ) : reservations.length === 0 ? (
             <div className="empty-state">
-              <p>No hay reservaciones</p>
-              <span>Las reservaciones aparecerán aquí</span>
+              <p>No hay reservaciones para hoy</p>
+              <span>Las reservaciones del día aparecerán aquí</span>
             </div>
           ) : (
             <div className="table-container">
@@ -459,7 +471,7 @@ const HomeAdmin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {reservations.slice(0, 5).map((reservation) => (
+                  {reservations.map((reservation) => (
                     <tr key={reservation.id}>
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>
