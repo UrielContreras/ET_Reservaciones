@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
@@ -52,6 +52,23 @@ const HomeAdmin = () => {
   const [userName, setUserName] = useState<string>('');
   const [myAdminReservations, setMyAdminReservations] = useState<AdminReservation[]>([]);
   const [loadingAdminReservations, setLoadingAdminReservations] = useState(true);
+  
+  // Estados para filtrado y ordenamiento de usuarios
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userAreaFilter, setUserAreaFilter] = useState('all');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [userSortField, setUserSortField] = useState<keyof User>('firstName');
+  const [userSortDirection, setUserSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Estados para filtrado y ordenamiento de reservaciones
+  const [reservationSearchTerm, setReservationSearchTerm] = useState('');
+  const [reservationStatusFilter, setReservationStatusFilter] = useState('all');
+  const [reservationSortField, setReservationSortField] = useState<keyof Reservation>('userName');
+  const [reservationSortDirection, setReservationSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Referencias para el scroll
+  const usersTableRef = useRef<HTMLElement>(null);
+  const reservationsTableRef = useRef<HTMLElement>(null);
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -82,7 +99,10 @@ const HomeAdmin = () => {
 
   const loadReservations = async () => {
     try {
-      setLoadingReservations(true);
+      // No mostramos el loading en refrescos automáticos si ya hay datos
+      if (reservations.length === 0) {
+        setLoadingReservations(true);
+      }
       const response = await axios.get(`${API_BASE_URL}/api/reservations/all`);
       // Filtrar solo las reservaciones de hoy
       const today = getTodayDate();
@@ -114,7 +134,10 @@ const HomeAdmin = () => {
 
   const loadAdminReservations = async () => {
     try {
-      setLoadingAdminReservations(true);
+      // No mostramos el loading en refrescos automáticos si ya hay datos
+      if (myAdminReservations.length === 0) {
+        setLoadingAdminReservations(true);
+      }
       const token = localStorage.getItem('token');
       if (!token) {
         console.log('[ADMIN] No hay token');
@@ -189,6 +212,16 @@ const HomeAdmin = () => {
     loadReservations();
     loadUserProfile();
     loadAdminReservations();
+
+    // Configurar refresco automático cada 2 minutos (120000 ms)
+    const refreshInterval = setInterval(() => {
+      loadReservations();
+      loadAdminReservations();
+      // Solo refrescamos las reservaciones para no interrumpir si el usuario está editando usuarios
+    }, 120000); // 2 minutos
+
+    // Limpiar el intervalo cuando el componente se desmonte
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const handleLogout = () => {
@@ -254,6 +287,90 @@ const HomeAdmin = () => {
     setUserToDelete(null);
   };
 
+  // Función para manejar el ordenamiento de usuarios
+  const handleUserSort = (field: keyof User) => {
+    if (userSortField === field) {
+      setUserSortDirection(userSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setUserSortField(field);
+      setUserSortDirection('asc');
+    }
+  };
+
+  // Función para manejar el ordenamiento de reservaciones
+  const handleReservationSort = (field: keyof Reservation) => {
+    if (reservationSortField === field) {
+      setReservationSortDirection(reservationSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setReservationSortField(field);
+      setReservationSortDirection('asc');
+    }
+  };
+
+  // Obtener áreas únicas de los usuarios
+  const uniqueAreas = Array.from(new Set(users.map(u => u.area).filter(Boolean)));
+
+  // Filtrar y ordenar usuarios
+  const filteredAndSortedUsers = users
+    .filter(user => {
+      const matchesSearch = 
+        user.firstName.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+      
+      const matchesArea = userAreaFilter === 'all' || user.area === userAreaFilter;
+      const matchesRole = userRoleFilter === 'all' || user.role === userRoleFilter;
+      
+      return matchesSearch && matchesArea && matchesRole;
+    })
+    .sort((a, b) => {
+      const aValue = a[userSortField];
+      const bValue = b[userSortField];
+      
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      
+      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      return userSortDirection === 'asc' ? comparison : -comparison;
+    });
+
+  // Filtrar y ordenar reservaciones
+  const filteredAndSortedReservations = reservations
+    .filter(reservation => {
+      const matchesSearch = 
+        reservation.userName.toLowerCase().includes(reservationSearchTerm.toLowerCase()) ||
+        reservation.email.toLowerCase().includes(reservationSearchTerm.toLowerCase()) ||
+        (reservation.area && reservation.area.toLowerCase().includes(reservationSearchTerm.toLowerCase()));
+      
+      const matchesStatus = reservationStatusFilter === 'all' || reservation.status === reservationStatusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const aValue = a[reservationSortField];
+      const bValue = b[reservationSortField];
+      
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      
+      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      return reservationSortDirection === 'asc' ? comparison : -comparison;
+    });
+
+  // Función para manejar el cambio de vista con scroll
+  const handleViewChange = (view: 'users' | 'reservations') => {
+    setShowView(view);
+    
+    // Hacer scroll después de que el DOM se actualice
+    setTimeout(() => {
+      if (view === 'users' && usersTableRef.current) {
+        usersTableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (view === 'reservations' && reservationsTableRef.current) {
+        reservationsTableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <>
     <div className="reserv-container">
@@ -306,14 +423,14 @@ const HomeAdmin = () => {
             <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
             <h3>Reservaciones de Hoy</h3>
             <p className="card-number">{reservations.length}</p>
-            <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
+            <button className="btn-card" onClick={() => handleViewChange('reservations')}>Ver todas</button>
           </div>
 
           <div className="dashboard-card">
             <div className="card-icon"><UsersIcon size={32} color="#667eea" /></div>
             <h3>Total de Usuarios</h3>
             <p className="card-number">{users.length}</p>
-            <button className="btn-card" onClick={() => setShowView('users')}>Gestionar</button>
+            <button className="btn-card" onClick={() => handleViewChange('users')}>Gestionar</button>
           </div>
 
           <div className="dashboard-card">
@@ -383,32 +500,118 @@ const HomeAdmin = () => {
         </section>
 
         {showView === 'users' && (
-          <section className="recent-section">
+          <section className="recent-section" ref={usersTableRef}>
             <h2>Todos los Usuarios del Sistema</h2>
+            
+            {/* Controles de filtrado y búsqueda */}
+            <div className="filter-controls" style={{
+              display: 'flex',
+              gap: '1rem',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}>
+              <input
+                type="text"
+                placeholder="Buscar por nombre, apellido o correo..."
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                style={{
+                  flex: '1',
+                  minWidth: '250px',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.9rem'
+                }}
+              />
+              
+              <select
+                value={userAreaFilter}
+                onChange={(e) => setUserAreaFilter(e.target.value)}
+                style={{
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.9rem',
+                  minWidth: '150px'
+                }}
+              >
+                <option value="all">Todas las áreas</option>
+                {uniqueAreas.map(area => (
+                  <option key={area} value={area}>{area}</option>
+                ))}
+              </select>
+              
+              <select
+                value={userRoleFilter}
+                onChange={(e) => setUserRoleFilter(e.target.value)}
+                style={{
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.9rem',
+                  minWidth: '150px'
+                }}
+              >
+                <option value="all">Todos los roles</option>
+                <option value="Employee">Empleado</option>
+                <option value="Admin">Administrador</option>
+              </select>
+              
+              <button
+                onClick={() => {
+                  setUserSearchTerm('');
+                  setUserAreaFilter('all');
+                  setUserRoleFilter('all');
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  background: '#f7fafc',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Limpiar filtros
+              </button>
+            </div>
+
             {loading ? (
             <div className="empty-state">
               <p>Cargando usuarios...</p>
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredAndSortedUsers.length === 0 ? (
             <div className="empty-state">
-              <p>No hay usuarios registrados</p>
-              <span>Los usuarios aparecerán aquí</span>
+              <p>No se encontraron usuarios</p>
+              <span>Intenta ajustar los filtros de búsqueda</span>
             </div>
           ) : (
             <div className="table-container">
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>Nombre</th>
-                    <th>Apellido</th>
-                    <th>Correo</th>
-                    <th>Área</th>
-                    <th>Rol</th>
+                    <th onClick={() => handleUserSort('firstName')} style={{ cursor: 'pointer' }}>
+                      Nombre {userSortField === 'firstName' && (userSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleUserSort('lastName')} style={{ cursor: 'pointer' }}>
+                      Apellido {userSortField === 'lastName' && (userSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleUserSort('email')} style={{ cursor: 'pointer' }}>
+                      Correo {userSortField === 'email' && (userSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleUserSort('area')} style={{ cursor: 'pointer' }}>
+                      Área {userSortField === 'area' && (userSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleUserSort('role')} style={{ cursor: 'pointer' }}>
+                      Rol {userSortField === 'role' && (userSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredAndSortedUsers.map((user) => (
                     <tr key={user.id}>
                       <td>{user.firstName}</td>
                       <td>{user.lastName}</td>
@@ -446,32 +649,105 @@ const HomeAdmin = () => {
         )}
 
         {showView === 'reservations' && (
-          <section className="recent-section">
+          <section className="recent-section" ref={reservationsTableRef}>
           <h2>Todas las Reservaciones de Hoy</h2>
+          
+          {/* Controles de filtrado y búsqueda */}
+          <div className="filter-controls" style={{
+            display: 'flex',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <input
+              type="text"
+              placeholder="Buscar por usuario, correo o área..."
+              value={reservationSearchTerm}
+              onChange={(e) => setReservationSearchTerm(e.target.value)}
+              style={{
+                flex: '1',
+                minWidth: '250px',
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                fontSize: '0.9rem'
+              }}
+            />
+            
+            <select
+              value={reservationStatusFilter}
+              onChange={(e) => setReservationStatusFilter(e.target.value)}
+              style={{
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                fontSize: '0.9rem',
+                minWidth: '150px'
+              }}
+            >
+              <option value="all">Todos los estados</option>
+              <option value="Active">Activa</option>
+              <option value="InProgress">En Curso</option>
+              <option value="Cancelled">Cancelada</option>
+              <option value="Expired">Expirada</option>
+              <option value="Completed">Completada</option>
+            </select>
+            
+            <button
+              onClick={() => {
+                setReservationSearchTerm('');
+                setReservationStatusFilter('all');
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: '#f7fafc',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
           {loadingReservations ? (
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
-          ) : reservations.length === 0 ? (
+          ) : filteredAndSortedReservations.length === 0 ? (
             <div className="empty-state">
-              <p>No hay reservaciones para hoy</p>
-              <span>Las reservaciones del día aparecerán aquí</span>
+              <p>No se encontraron reservaciones</p>
+              <span>Intenta ajustar los filtros de búsqueda</span>
             </div>
           ) : (
             <div className="table-container">
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>Usuario</th>
-                    <th>Correo</th>
-                    <th>Área</th>
-                    <th>Fecha</th>
-                    <th>Horario</th>
-                    <th>Estado</th>
+                    <th onClick={() => handleReservationSort('userName')} style={{ cursor: 'pointer' }}>
+                      Usuario {reservationSortField === 'userName' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleReservationSort('email')} style={{ cursor: 'pointer' }}>
+                      Correo {reservationSortField === 'email' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleReservationSort('area')} style={{ cursor: 'pointer' }}>
+                      Área {reservationSortField === 'area' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleReservationSort('date')} style={{ cursor: 'pointer' }}>
+                      Fecha {reservationSortField === 'date' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleReservationSort('timeRange')} style={{ cursor: 'pointer' }}>
+                      Horario {reservationSortField === 'timeRange' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleReservationSort('status')} style={{ cursor: 'pointer' }}>
+                      Estado {reservationSortField === 'status' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reservations.map((reservation) => (
+                  {filteredAndSortedReservations.map((reservation) => (
                     <tr key={reservation.id}>
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>

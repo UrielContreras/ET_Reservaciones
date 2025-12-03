@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Auth.css';
 import RegisterEmployee from './Register_employee';
+import { EyeIcon, EyeOffIcon } from '../components/Icons';
 
 interface LoginProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [userType, setUserType] = useState<'empleado' | 'admin'>('empleado');
   const [error, setError] = useState<string | null>(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,14 +89,24 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
 
           <div className="form-group">
             <label htmlFor="password">Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <div className="input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="toggle-password"
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+              </button>
+            </div>
           </div>
 
           {error && <div className="error-message">{error}</div>}
