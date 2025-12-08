@@ -393,6 +393,7 @@ public class ReservationsController : ControllerBase
         }
 
         reservation.CheckOutAt = now;
+        reservation.Status = ReservationStatus.Expired; // Marcar como completada
         await _db.SaveChangesAsync();
 
         var duration = (now - reservation.CheckInAt!.Value).TotalMinutes;

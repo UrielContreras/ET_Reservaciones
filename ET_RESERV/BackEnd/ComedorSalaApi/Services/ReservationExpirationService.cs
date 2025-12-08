@@ -55,13 +55,14 @@ public class ReservationExpirationService : BackgroundService
 
         _logger.LogInformation($"[EXPIRATION SERVICE] Verificando expiración. Hora actual: {now:yyyy-MM-dd HH:mm:ss}");
 
-        // Buscar reservaciones activas o en progreso
+        // Buscar SOLO reservaciones activas o en progreso que NO tengan check-out
         var activeReservations = await db.Reservations
             .Include(r => r.TimeSlot)
-            .Where(r => r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress)
+            .Where(r => (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress) 
+                     && r.CheckOutAt == null)  // No tocar las que ya tienen check-out
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation($"[EXPIRATION SERVICE] Encontradas {activeReservations.Count} reservaciones activas/en progreso");
+        _logger.LogInformation($"[EXPIRATION SERVICE] Encontradas {activeReservations.Count} reservaciones activas/en progreso sin check-out");
 
         var updated = 0;
         foreach (var reservation in activeReservations)
@@ -100,10 +101,11 @@ public class ReservationExpirationService : BackgroundService
                     _logger.LogInformation($"[EXPIRATION SERVICE] ✓ Reservación {reservation.Id} MARCADA como EXPIRADA");
                 }
             }
-            // Si ya comenzó pero no ha terminado, marcar como en progreso
+            // Si ya comenzó pero no ha terminado, marcar como en progreso (solo si tiene check-in)
             else if (now >= slotStartTime && now <= slotEndTime)
             {
-                if (reservation.Status != ReservationStatus.InProgress)
+                // Solo cambiar a InProgress si tiene check-in
+                if (reservation.CheckInAt != null && reservation.Status != ReservationStatus.InProgress)
                 {
                     reservation.Status = ReservationStatus.InProgress;
                     updated++;
