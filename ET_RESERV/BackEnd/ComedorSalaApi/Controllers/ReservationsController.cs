@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ComedorSalaApi.Data;
 using ComedorSalaApi.Dtos;
 using ComedorSalaApi.Models;
+using ComedorSalaApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,12 @@ public class ReservationsController : ControllerBase
     private readonly AppDbContext _db;
     private const int CAPACIDAD = 5; // puedes pasar esto a configuración
     private readonly TimeZoneInfo _mexicoTimeZone;
+    private readonly TimeSimulationService _timeService;
 
-    public ReservationsController(AppDbContext db)
+    public ReservationsController(AppDbContext db, TimeSimulationService timeService)
     {
         _db = db;
+        _timeService = timeService;
         _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
     }
 
@@ -32,7 +35,8 @@ public class ReservationsController : ControllerBase
 
     private DateTime GetMexicoTime()
     {
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _mexicoTimeZone);
+        // Usar el servicio de simulación de tiempo
+        return _timeService.GetCurrentTime();
     }
 
     [HttpGet("timeslots")]
@@ -292,5 +296,115 @@ public class ReservationsController : ControllerBase
         }
 
         return Ok(new { message = "No hay reservaciones para corregir", hora_actual = now.ToString("HH:mm:ss"), total_expiradas = expiredToday.Count });
+    }
+
+    [HttpPost("check-in")]
+    [Authorize]
+    public async Task<IActionResult> CheckIn([FromBody] QRCodeRequest request)
+    {
+        // Validar que el código QR sea el correcto (código fijo)
+        const string VALID_QR_CODE = "COMEDOR_CHECK_2024";
+        if (request.QRCode != VALID_QR_CODE)
+        {
+            return BadRequest("Código QR inválido");
+        }
+
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
+        var userId = GetCurrentUserId();
+
+        // Buscar reservación activa del usuario para hoy
+        var reservation = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .FirstOrDefaultAsync(r => 
+                r.UserId == userId && 
+                r.Date == today && 
+                (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress));
+
+        if (reservation == null)
+        {
+            return BadRequest("No tienes una reservación activa para hoy");
+        }
+
+        // Verificar que el horario ya haya comenzado
+        var slotStartTime = new DateTime(now.Year, now.Month, now.Day).Add(reservation.TimeSlot.StartTime);
+        if (now < slotStartTime)
+        {
+            var minutesUntilStart = (int)(slotStartTime - now).TotalMinutes;
+            return BadRequest($"Tu reservación aún no comienza. Faltan {minutesUntilStart} minutos.");
+        }
+
+        // Verificar que el horario no haya terminado
+        var slotEndTime = new DateTime(now.Year, now.Month, now.Day).Add(reservation.TimeSlot.EndTime);
+        if (now > slotEndTime)
+        {
+            return BadRequest("Tu horario de reservación ya terminó");
+        }
+
+        // Verificar si ya hizo check-in
+        if (reservation.CheckInAt != null)
+        {
+            return BadRequest($"Ya hiciste check-in a las {reservation.CheckInAt:HH:mm}");
+        }
+
+        // Registrar check-in
+        reservation.CheckInAt = now;
+        reservation.Status = ReservationStatus.InProgress;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { 
+            message = "Check-in exitoso", 
+            checkInTime = now.ToString("HH:mm:ss"),
+            timeSlot = $"{reservation.TimeSlot.StartTime:hh\\:mm}-{reservation.TimeSlot.EndTime:hh\\:mm}"
+        });
+    }
+
+    [HttpPost("check-out")]
+    [Authorize]
+    public async Task<IActionResult> CheckOut([FromBody] QRCodeRequest request)
+    {
+        // Validar que el código QR sea el correcto (código fijo)
+        const string VALID_QR_CODE = "COMEDOR_CHECK_2024";
+        if (request.QRCode != VALID_QR_CODE)
+        {
+            return BadRequest("Código QR inválido");
+        }
+
+        var now = GetMexicoTime();
+        var today = DateOnly.FromDateTime(now);
+        var userId = GetCurrentUserId();
+
+        // Buscar reservación con check-in del usuario para hoy
+        var reservation = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .FirstOrDefaultAsync(r => 
+                r.UserId == userId && 
+                r.Date == today && 
+                r.CheckInAt != null);
+
+        if (reservation == null)
+        {
+            return BadRequest("No tienes un check-in registrado para hoy");
+        }
+
+        // TEMPORAL: Comentado porque CheckOutAt no existe en BD aún
+        // if (reservation.CheckOutAt != null)
+        // {
+        //     return BadRequest($"Ya hiciste check-out a las {reservation.CheckOutAt:HH:mm}");
+        // }
+
+        // TEMPORAL: Simular check-out sin guardar en BD (campo CheckOutAt comentado)
+        // reservation.CheckOutAt = now;
+        // await _db.SaveChangesAsync();
+
+        var duration = (now - reservation.CheckInAt.Value).TotalMinutes;
+
+        return Ok(new { 
+            message = "Check-out exitoso (MODO PRUEBA - No guardado en BD)", 
+            checkOutTime = now.ToString("HH:mm:ss"),
+            checkInTime = reservation.CheckInAt.Value.ToString("HH:mm:ss"),
+            duration = $"{(int)duration} minutos",
+            warning = "Este check-out no se guardó en la base de datos. Aplicar migración para funcionalidad completa."
+        });
     }
 }

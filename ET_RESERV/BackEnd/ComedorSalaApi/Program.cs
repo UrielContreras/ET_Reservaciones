@@ -65,6 +65,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Servicio de simulación de tiempo (Singleton para mantener estado)
+builder.Services.AddSingleton<TimeSimulationService>();
+
 // Background Service para expirar reservaciones
 builder.Services.AddHostedService<ReservationExpirationService>();
 

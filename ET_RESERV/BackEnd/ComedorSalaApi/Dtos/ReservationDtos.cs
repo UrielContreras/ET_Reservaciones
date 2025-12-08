@@ -5,6 +5,11 @@ public class CreateReservationRequest
     public int TimeSlotId { get; set; }
 }
 
+public class QRCodeRequest
+{
+    public string QRCode { get; set; } = null!;
+}
+
 public class ReservationDto
 {
     public int Id { get; set; }

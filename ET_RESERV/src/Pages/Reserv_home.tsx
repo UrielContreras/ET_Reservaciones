@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import CreateReserv from './Create_reserv';
 import ChangePassword from './ChangePassword';
+import QRScanner from '../components/QRScanner';
 import { CalendarIcon, ClockIcon, PlusIcon, CheckIcon } from '../components/Icons';
 
 interface Reservation {
@@ -24,6 +25,8 @@ const ReservHome = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [qrScannerMode, setQRScannerMode] = useState<'checkin' | 'checkout'>('checkin');
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -171,6 +174,21 @@ const ReservHome = () => {
     fetchAllReservations();
   };
 
+  const handleCheckIn = () => {
+    setQRScannerMode('checkin');
+    setShowQRScanner(true);
+  };
+
+  const handleCheckOut = () => {
+    setQRScannerMode('checkout');
+    setShowQRScanner(true);
+  };
+
+  const handleQRSuccess = () => {
+    fetchMyReservations();
+    fetchAllReservations();
+  };
+
   const handleLogout = () => {
     // Limpiar completamente el localStorage
     localStorage.clear();
@@ -294,6 +312,24 @@ const ReservHome = () => {
                      reservation.status === 'InProgress' ? 'En Curso' :
                      reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
                   </span>
+                  {reservation.status === 'Active' && (
+                    <button 
+                      className="btn-card primary"
+                      onClick={handleCheckIn}
+                      style={{ marginRight: '0.5rem' }}
+                    >
+                      Check-In
+                    </button>
+                  )}
+                  {reservation.status === 'InProgress' && (
+                    <button 
+                      className="btn-card"
+                      onClick={handleCheckOut}
+                      style={{ marginRight: '0.5rem' }}
+                    >
+                      Check-Out
+                    </button>
+                  )}
                   {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
                     <button 
                       className="btn-cancel"
@@ -433,6 +469,14 @@ const ReservHome = () => {
     )}
     
     {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
+    
+    {showQRScanner && (
+      <QRScanner 
+        onClose={() => setShowQRScanner(false)} 
+        onSuccess={handleQRSuccess}
+        mode={qrScannerMode}
+      />
+    )}
     </>
   );
 };

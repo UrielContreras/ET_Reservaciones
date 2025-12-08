@@ -33,6 +33,9 @@ namespace ComedorSalaApi.Migrations
                     b.Property<DateTime?>("CheckInAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CheckOutAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
