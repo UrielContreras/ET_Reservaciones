@@ -24,6 +24,5 @@ public class Reservation
     public ReservationStatus Status { get; set; } = ReservationStatus.Active;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? CheckInAt { get; set; }
-    // TEMPORAL: Comentado hasta aplicar migración
-    // public DateTime? CheckOutAt { get; set; };
+    public DateTime? CheckOutAt { get; set; }
 }

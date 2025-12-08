@@ -387,24 +387,21 @@ public class ReservationsController : ControllerBase
             return BadRequest("No tienes un check-in registrado para hoy");
         }
 
-        // TEMPORAL: Comentado porque CheckOutAt no existe en BD aún
-        // if (reservation.CheckOutAt != null)
-        // {
-        //     return BadRequest($"Ya hiciste check-out a las {reservation.CheckOutAt:HH:mm}");
-        // }
+        if (reservation.CheckOutAt != null)
+        {
+            return BadRequest($"Ya hiciste check-out a las {reservation.CheckOutAt.Value:HH:mm}");
+        }
 
-        // TEMPORAL: Simular check-out sin guardar en BD (campo CheckOutAt comentado)
-        // reservation.CheckOutAt = now;
-        // await _db.SaveChangesAsync();
+        reservation.CheckOutAt = now;
+        await _db.SaveChangesAsync();
 
-        var duration = (now - reservation.CheckInAt.Value).TotalMinutes;
+        var duration = (now - reservation.CheckInAt!.Value).TotalMinutes;
 
         return Ok(new { 
-            message = "Check-out exitoso (MODO PRUEBA - No guardado en BD)", 
+            message = "Check-out exitoso", 
             checkOutTime = now.ToString("HH:mm:ss"),
             checkInTime = reservation.CheckInAt.Value.ToString("HH:mm:ss"),
-            duration = $"{(int)duration} minutos",
-            warning = "Este check-out no se guardó en la base de datos. Aplicar migración para funcionalidad completa."
+            duration = $"{(int)duration} minutos"
         });
     }
 }
