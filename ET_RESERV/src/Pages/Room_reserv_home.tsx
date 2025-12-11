@@ -1,0 +1,428 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from '../apiConfig';
+import '../Styles/Reserv_home.css';
+import CreateRoomReserv from './Create_room_reserv';
+import ChangePassword from './ChangePassword';
+import { CalendarIcon, ClockIcon, PlusIcon, CheckIcon } from '../components/Icons';
+
+interface RoomReservation {
+  id: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  timeRange: string;
+  status: string;
+}
+
+const RoomReservHome = () => {
+  const [showCreateReserv, setShowCreateReserv] = useState(false);
+  const [myReservations, setMyReservations] = useState<RoomReservation[]>([]);
+  const [allReservations, setAllReservations] = useState<RoomReservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showMyReservations, setShowMyReservations] = useState(false);
+  const [showPending, setShowPending] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+
+  // Función para formatear fecha
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('es-MX');
+  };
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/profile/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setUserName(response.data.firstName);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
+    const fetchMyReservations = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/roomreservations/today`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        console.log('[ROOM RESERV] Reservaciones de hoy recibidas:', response.data);
+        setMyReservations(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching room reservations:', err);
+        setLoading(false);
+      }
+    };
+
+    const fetchAllReservations = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${API_BASE_URL}/api/roomreservations/my-reservations`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setAllReservations(response.data);
+      } catch (err) {
+        console.error('Error fetching all room reservations:', err);
+      }
+    };
+
+    fetchUserProfile();
+    fetchMyReservations();
+    fetchAllReservations();
+  }, []);
+
+  const fetchMyReservations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/api/roomreservations/today`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setMyReservations(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching room reservations:', err);
+      setLoading(false);
+    }
+  };
+
+  const fetchAllReservations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/api/roomreservations/my-reservations`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setAllReservations(response.data);
+    } catch (err) {
+      console.error('Error fetching all room reservations:', err);
+    }
+  };
+
+  const handleCancelReservation = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación de sala?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.post(
+        `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Reservación de sala cancelada exitosamente');
+      fetchMyReservations();
+      fetchAllReservations();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        alert(err.response.data);
+      } else {
+        alert('Error al cancelar la reservación de sala');
+      }
+      console.error('Error canceling room reservation:', err);
+    }
+  };
+
+  const handleReservationCreated = () => {
+    setShowCreateReserv(false);
+    fetchMyReservations();
+    fetchAllReservations();
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.hash = '';
+    window.location.replace('/');
+  };
+
+  return (
+    <>
+    <div className="reserv-container">
+      <nav className="reserv-navbar">
+        <div className="nav-brand">
+          <h2>Reservaciones de Sala</h2>
+        </div>
+        <div className="nav-user">
+          <span>Bienvenid@ {userName}</span>
+        <button
+            onClick={() => setShowChangePassword(true)}
+            className="btn-logout"
+            style={{ marginRight: '0.5rem' }}
+        >
+            Cambiar Contraseña
+        </button>
+        <button
+            onClick={() => {
+                handleLogout();
+                window.location.href = '/';
+            }}
+            className="btn-logout"
+        >
+            Cerrar Sesión
+        </button>
+        </div>
+      </nav>
+
+    <div className="reserv-content">
+      <header className="reserv-header">
+        <h1>Panel de Reservaciones de Sala</h1>
+        <p>Gestiona tus reservaciones de sala de juntas</p>
+      </header>
+
+      <div
+        className="reserv-dashboard"
+        style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '1rem',
+        flexWrap: 'nowrap',
+        alignItems: 'stretch',
+        overflowX: 'auto',
+        paddingBottom: '0.5rem'
+        }}
+      >
+        <div className="dashboard-card" style={{ minWidth: 220 }}>
+        <div className="card-icon"><CalendarIcon size={32} color="#667eea" /></div>
+        <h3>Mis Reservaciones</h3>
+        <p className="card-number">{allReservations.length}</p>
+        <button className="btn-card" onClick={() => setShowMyReservations(true)}>Ver todas</button>
+        </div>
+
+        <div className="dashboard-card" style={{ minWidth: 220 }}>
+        <div className="card-icon"><PlusIcon size={32} color="#667eea" /></div>
+        <h3>Nueva Reservación</h3>
+        <p className="card-text">Reserva la sala de juntas</p>
+        <button className="btn-card primary" onClick={() => setShowCreateReserv(true)}>Crear</button>
+        </div>
+
+        <div className="dashboard-card" style={{ minWidth: 220 }}>
+        <div className="card-icon"><ClockIcon size={32} color="#667eea" /></div>
+        <h3>Pendientes</h3>
+        <p className="card-number">{allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').length}</p>
+        <button className="btn-card" onClick={() => setShowPending(true)}>Revisar</button>
+        </div>
+
+        <div className="dashboard-card" style={{ minWidth: 220 }}>
+        <div className="card-icon"><CheckIcon size={32} color="#667eea" /></div>
+        <h3>Completadas</h3>
+        <p className="card-number">{allReservations.filter(r => r.status === 'Cancelled' || r.status === 'Expired').length}</p>
+        <button className="btn-card" onClick={() => setShowCompleted(true)}>Ver historial</button>
+        </div>
+      </div>
+
+      <section className="recent-section">
+        <h2>Reservaciones de sala para hoy</h2>
+        {loading ? (
+          <div className="empty-state">
+            <p>Cargando...</p>
+          </div>
+        ) : myReservations.length === 0 ? (
+          <div className="empty-state">
+            <p>No hay reservaciones de sala para hoy</p>
+            <span>Las reservaciones aparecerán aquí</span>
+          </div>
+        ) : (
+          <div className="reservations-list">
+            {myReservations.map((reservation) => (
+              <div key={reservation.id} className="reservation-card">
+                <div className="reservation-info">
+                  <div className="reservation-time">
+                    <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                  <span className="time-text">{reservation.timeRange}</span>
+                  </div>
+                  <div className="reservation-date">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
+                  </div>
+                </div>
+                <div className="reservation-actions">
+                  <span className={`reservation-status ${
+                    reservation.status === 'Active' ? 'status-active' :
+                    reservation.status === 'InProgress' ? 'status-inprogress' :
+                    reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                  }`}>
+                    {reservation.status === 'Active' ? 'Activa' :
+                     reservation.status === 'InProgress' ? 'En Curso' :
+                     reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
+                  </span>
+                  {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
+                    <button 
+                      className="btn-cancel"
+                      onClick={() => handleCancelReservation(reservation.id)}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+    </div>
+
+    {showCreateReserv && <CreateRoomReserv onClose={handleReservationCreated} />}
+
+    {/* Modal de Mis Reservaciones */}
+    {showMyReservations && (
+      <div className="modal-overlay" onClick={() => setShowMyReservations(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowMyReservations(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Mis Últimas Reservaciones de Sala</h1>
+            <p>Tus reservaciones más recientes</p>
+          </div>
+          <div className="modal-content">
+            {allReservations.length === 0 ? (
+              <div className="empty-state">
+                <p>No tienes reservaciones de sala</p>
+              </div>
+            ) : (
+              <div className="reservations-list">
+                {allReservations.slice(0, 5).map((reservation) => (
+                  <div key={reservation.id} className="reservation-card">
+                    <div className="reservation-info">
+                      <div className="reservation-time">
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                        <span className="time-text">{reservation.timeRange}</span>
+                      </div>
+                      <div className="reservation-date">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
+                      </div>
+                    </div>
+                    <span className={`reservation-status ${
+                      reservation.status === 'Active' ? 'status-active' :
+                      reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                    }`}>
+                      {reservation.status === 'Active' ? 'Activa' :
+                       reservation.status === 'Cancelled' ? 'Cancelada' : 'Completada'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal de Pendientes */}
+    {showPending && (
+      <div className="modal-overlay" onClick={() => setShowPending(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowPending(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Reservaciones de Sala Pendientes</h1>
+            <p>Reservaciones activas o en curso</p>
+          </div>
+          <div className="modal-content">
+            {allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').length === 0 ? (
+              <div className="empty-state">
+                <p>No tienes reservaciones de sala pendientes</p>
+              </div>
+            ) : (
+              <div className="reservations-list">
+                {allReservations.filter(r => r.status === 'Active' || r.status === 'InProgress').map((reservation) => (
+                  <div key={reservation.id} className="reservation-card">
+                    <div className="reservation-info">
+                      <div className="reservation-time">
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                        <span className="time-text">{reservation.timeRange}</span>
+                      </div>
+                      <div className="reservation-date">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
+                      </div>
+                    </div>
+                    <span className="reservation-status status-pending">Pendiente</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal de Completadas */}
+    {showCompleted && (
+      <div className="modal-overlay" onClick={() => setShowCompleted(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowCompleted(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Historial de Reservaciones de Sala</h1>
+            <p>Reservaciones canceladas o expiradas</p>
+          </div>
+          <div className="modal-content">
+            {allReservations.filter(r => r.status === 'Cancelled' || r.status === 'Expired').length === 0 ? (
+              <div className="empty-state">
+                <p>No hay reservaciones de sala en el historial</p>
+              </div>
+            ) : (
+              <div className="reservations-list">
+                {allReservations.filter(r => r.status === 'Cancelled' || r.status === 'Expired').map((reservation) => (
+                  <div key={reservation.id} className="reservation-card">
+                    <div className="reservation-info">
+                      <div className="reservation-time">
+                        <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                        <span className="time-text">{reservation.timeRange}</span>
+                      </div>
+                      <div className="reservation-date">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}</span>
+                      </div>
+                    </div>
+                    <span className={`reservation-status ${reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'}`}>
+                      {reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    
+    {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
+    </>
+  );
+};
+
+export default RoomReservHome;

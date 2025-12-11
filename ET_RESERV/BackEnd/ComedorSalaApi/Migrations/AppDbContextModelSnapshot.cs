@@ -57,6 +57,42 @@ namespace ComedorSalaApi.Migrations
                     b.ToTable("Reservations");
                 });
 
+            modelBuilder.Entity("ComedorSalaApi.Models.RoomReservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CheckInAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RoomReservations");
+                });
+
             modelBuilder.Entity("ComedorSalaApi.Models.TimeSlot", b =>
                 {
                     b.Property<int>("Id")
@@ -141,6 +177,17 @@ namespace ComedorSalaApi.Migrations
                         .IsRequired();
 
                     b.Navigation("TimeSlot");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ComedorSalaApi.Models.RoomReservation", b =>
+                {
+                    b.HasOne("ComedorSalaApi.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

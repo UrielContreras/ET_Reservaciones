@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import Register from './Register';
 import CreateReserv from './Create_reserv';
+import CreateRoomReserv from './Create_room_reserv';
 import UpdateUsers from './Update_users';
 import ChangePassword from './ChangePassword';
 import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon, CalendarIcon, ClockIcon } from '../components/Icons';
@@ -26,6 +27,17 @@ interface Reservation {
   userName: string;
   email: string;
   area: string;
+  type?: 'comedor' | 'sala';
+}
+
+interface RoomReservation {
+  id: number;
+  date: string;
+  timeRange: string;
+  status: string;
+  userName: string;
+  email: string;
+  area: string;
 }
 
 interface AdminReservation {
@@ -39,6 +51,8 @@ interface AdminReservation {
 const HomeAdmin = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [showCreateReserv, setShowCreateReserv] = useState(false);
+  const [showCreateRoomReserv, setShowCreateRoomReserv] = useState(false);
+  const [showReservationTypeModal, setShowReservationTypeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showUpdateUser, setShowUpdateUser] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -46,11 +60,13 @@ const HomeAdmin = () => {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [roomReservations, setRoomReservations] = useState<RoomReservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [showView, setShowView] = useState<'users' | 'reservations'>('users');
   const [userName, setUserName] = useState<string>('');
   const [myAdminReservations, setMyAdminReservations] = useState<AdminReservation[]>([]);
+  const [myAdminRoomReservations, setMyAdminRoomReservations] = useState<RoomReservation[]>([]);
   const [loadingAdminReservations, setLoadingAdminReservations] = useState(true);
   
   // Estados para filtrado y ordenamiento de usuarios
@@ -97,7 +113,7 @@ const HomeAdmin = () => {
     }
   };
 
-  const loadReservations = async () => {
+  const loadReservations = useCallback(async () => {
     try {
       // No mostramos el loading en refrescos automáticos si ya hay datos
       if (reservations.length === 0) {
@@ -113,7 +129,26 @@ const HomeAdmin = () => {
     } finally {
       setLoadingReservations(false);
     }
-  };
+  }, []);
+
+  const loadRoomReservations = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/api/roomreservations/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // Filtrar solo las reservaciones de hoy
+      const today = getTodayDate();
+      const todayRoomReservations = response.data.filter((res: RoomReservation) => res.date === today);
+      setRoomReservations(todayRoomReservations);
+    } catch (error) {
+      console.error('Error al cargar reservaciones de sala:', error);
+    }
+  }, []);
 
   const loadUserProfile = async () => {
     try {
@@ -164,12 +199,27 @@ const HomeAdmin = () => {
       console.log('[ADMIN] Reservaciones de hoy recibidas:', response.data);
       console.log('[ADMIN] Cantidad de reservaciones:', response.data.length);
       setMyAdminReservations(response.data);
-    } catch (error: any) {
+
+      // Cargar también las reservaciones de sala del admin
+      try {
+        const roomResponse = await axios.get(`${API_BASE_URL}/api/roomreservations/today`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        console.log('[ADMIN] Reservaciones de sala de hoy recibidas:', roomResponse.data);
+        setMyAdminRoomReservations(roomResponse.data);
+      } catch (roomErr) {
+        console.error('[ADMIN] Error al cargar reservaciones de sala:', roomErr);
+      }
+    } catch (error: unknown) {
       console.error('[ADMIN] Error al cargar reservaciones:', error);
-      console.error('[ADMIN] Status:', error.response?.status);
-      console.error('[ADMIN] Data:', error.response?.data);
-      if (error.response?.status === 403) {
-        console.error('[ADMIN] Error 403: No tienes permisos. Necesitas cerrar sesión y volver a iniciar sesión.');
+      if (axios.isAxiosError(error)) {
+        console.error('[ADMIN] Status:', error.response?.status);
+        console.error('[ADMIN] Data:', error.response?.data);
+        if (error.response?.status === 403) {
+          console.error('[ADMIN] Error 403: No tienes permisos. Necesitas cerrar sesión y volver a iniciar sesión.');
+        }
       }
     } finally {
       setLoadingAdminReservations(false);
@@ -207,11 +257,44 @@ const HomeAdmin = () => {
     }
   };
 
+  const handleCancelAdminRoomReservation = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación de sala?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.put(
+        `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Reservación de sala cancelada exitosamente');
+      loadAdminReservations();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        alert(err.response.data);
+      } else {
+        alert('Error al cancelar la reservación de sala');
+      }
+      console.error('Error al cancelar reservación de sala:', err);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
     loadReservations();
+    loadRoomReservations();
     loadUserProfile();
     loadAdminReservations();
+<<<<<<< HEAD
 
     // Configurar refresco automático cada 2 minutos (120000 ms)
     const refreshInterval = setInterval(() => {
@@ -223,6 +306,9 @@ const HomeAdmin = () => {
     // Limpiar el intervalo cuando el componente se desmonte
     return () => clearInterval(refreshInterval);
   }, []);
+=======
+  }, [loadReservations, loadRoomReservations]);
+>>>>>>> cb0ee6b (Reservacion_Sala de juntas)
 
   const handleLogout = () => {
     // Limpiar completamente el localStorage
@@ -247,6 +333,21 @@ const HomeAdmin = () => {
     setShowCreateReserv(false);
     loadReservations(); // Recargar reservaciones después de crear una nueva
     loadAdminReservations(); // Recargar también las reservaciones del admin
+  };
+
+  const handleCreateRoomReservClose = () => {
+    setShowCreateRoomReserv(false);
+    loadRoomReservations(); // Recargar reservaciones de sala después de crear una nueva
+    loadAdminReservations(); // Recargar también las reservaciones del admin
+  };
+
+  const handleReservationTypeSelect = (type: 'comedor' | 'sala') => {
+    setShowReservationTypeModal(false);
+    if (type === 'comedor') {
+      setShowCreateReserv(true);
+    } else {
+      setShowCreateRoomReserv(true);
+    }
   };
 
   const handleDeleteUser = (userId: number, userName: string) => {
@@ -274,12 +375,16 @@ const HomeAdmin = () => {
       setShowDeleteModal(false);
       setUserToDelete(null);
       loadUsers(); // Recargar la lista de usuarios
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completo al dar de baja usuario:', error);
-      console.error('Respuesta del servidor:', error.response?.data);
-      console.error('Status:', error.response?.status);
-      const errorMessage = error.response?.data?.message || error.response?.data || 'Error al dar de baja el usuario. Por favor intenta de nuevo.';
-      alert(`Error: ${errorMessage}`);
+      if (axios.isAxiosError(error)) {
+        console.error('Respuesta del servidor:', error.response?.data);
+        console.error('Status:', error.response?.status);
+        const errorMessage = error.response?.data?.message || error.response?.data || 'Error al dar de baja el usuario. Por favor intenta de nuevo.';
+        alert(`Error: ${errorMessage}`);
+      } else {
+        alert('Error al dar de baja el usuario. Por favor intenta de nuevo.');
+      }
     }
   };
   const cancelDelete = () => {
@@ -422,8 +527,13 @@ const HomeAdmin = () => {
           <div className="dashboard-card">
             <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
             <h3>Reservaciones de Hoy</h3>
+<<<<<<< HEAD
             <p className="card-number">{reservations.length}</p>
             <button className="btn-card" onClick={() => handleViewChange('reservations')}>Ver todas</button>
+=======
+            <p className="card-number">{reservations.length + roomReservations.length}</p>
+            <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
+>>>>>>> cb0ee6b (Reservacion_Sala de juntas)
           </div>
 
           <div className="dashboard-card">
@@ -443,7 +553,7 @@ const HomeAdmin = () => {
             <div className="card-icon"><PlusIcon size={32} color="#667eea" /></div>
             <h3>Nueva Reservacion</h3>
             <p className="card-text">Crea una nueva reservación</p>
-            <button className="btn-card primary" onClick={() => setShowCreateReserv(true)}>Crear</button>
+            <button className="btn-card primary" onClick={() => setShowReservationTypeModal(true)}>Crear</button>
           </div>
 
         </div>
@@ -454,15 +564,16 @@ const HomeAdmin = () => {
             <div className="empty-state">
               <p>Cargando...</p>
             </div>
-          ) : myAdminReservations.length === 0 ? (
+          ) : myAdminReservations.length === 0 && myAdminRoomReservations.length === 0 ? (
             <div className="empty-state">
               <p>No hay reservaciones para hoy</p>
               <span>Las reservaciones aparecerán aquí</span>
             </div>
           ) : (
             <div className="reservations-list">
+              {/* Reservaciones de Comedor */}
               {myAdminReservations.map((reservation) => (
-                <div key={reservation.id} className="reservation-card">
+                <div key={`comedor-${reservation.id}`} className="reservation-card">
                   <div className="reservation-info">
                     <div className="reservation-time">
                       <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
@@ -470,7 +581,7 @@ const HomeAdmin = () => {
                     </div>
                     <div className="reservation-date">
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)}
+                        <CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)} - Comedor
                       </span>
                     </div>
                   </div>
@@ -488,6 +599,42 @@ const HomeAdmin = () => {
                       <button 
                         className="btn-cancel"
                         onClick={() => handleCancelAdminReservation(reservation.id)}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Reservaciones de Sala */}
+              {myAdminRoomReservations.map((reservation) => (
+                <div key={`sala-${reservation.id}`} className="reservation-card">
+                  <div className="reservation-info">
+                    <div className="reservation-time">
+                      <span className="time-icon"><ClockIcon size={20} color="#667eea" /></span>
+                      <span className="time-text">{reservation.timeRange}</span>
+                    </div>
+                    <div className="reservation-date">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <CalendarIcon size={18} color="#718096" /> {formatDate(reservation.date)} - Sala de Juntas
+                      </span>
+                    </div>
+                  </div>
+                  <div className="reservation-actions">
+                    <span className={`reservation-status ${
+                      reservation.status === 'Active' ? 'status-active' :
+                      reservation.status === 'InProgress' ? 'status-inprogress' :
+                      reservation.status === 'Cancelled' ? 'status-cancelled' : 'status-expired'
+                    }`}>
+                      {reservation.status === 'Active' ? 'Activa' :
+                       reservation.status === 'InProgress' ? 'En Curso' :
+                       reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
+                    </span>
+                    {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
+                      <button 
+                        className="btn-cancel"
+                        onClick={() => handleCancelAdminRoomReservation(reservation.id)}
                       >
                         Cancelar
                       </button>
@@ -716,7 +863,11 @@ const HomeAdmin = () => {
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
+<<<<<<< HEAD
           ) : filteredAndSortedReservations.length === 0 ? (
+=======
+          ) : reservations.length === 0 && roomReservations.length === 0 ? (
+>>>>>>> cb0ee6b (Reservacion_Sala de juntas)
             <div className="empty-state">
               <p>No se encontraron reservaciones</p>
               <span>Intenta ajustar los filtros de búsqueda</span>
@@ -726,6 +877,7 @@ const HomeAdmin = () => {
               <table className="users-table">
                 <thead>
                   <tr>
+<<<<<<< HEAD
                     <th onClick={() => handleReservationSort('userName')} style={{ cursor: 'pointer' }}>
                       Usuario {reservationSortField === 'userName' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
                     </th>
@@ -749,9 +901,45 @@ const HomeAdmin = () => {
                 <tbody>
                   {filteredAndSortedReservations.map((reservation) => (
                     <tr key={reservation.id}>
+=======
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Área</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Reservaciones de Comedor */}
+                  {reservations.map((reservation) => (
+                    <tr key={`comedor-${reservation.id}`}>
+>>>>>>> cb0ee6b (Reservacion_Sala de juntas)
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>
                       <td>{reservation.area || 'N/A'}</td>
+                      <td><span className="role-badge employee">Comedor</span></td>
+                      <td>{formatDate(reservation.date)}</td>
+                      <td>{reservation.timeRange}</td>
+                      <td>
+                        <span className={`role-badge ${reservation.status.toLowerCase()}`}>
+                          {reservation.status === 'Active' ? 'Activa' : 
+                           reservation.status === 'InProgress' ? 'En Curso' :
+                           reservation.status === 'Cancelled' ? 'Cancelada' : 
+                           reservation.status === 'Expired' ? 'Expirada' : 
+                           reservation.status === 'Completed' ? 'Completada' : reservation.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Reservaciones de Sala */}
+                  {roomReservations.map((reservation) => (
+                    <tr key={`sala-${reservation.id}`}>
+                      <td>{reservation.userName}</td>
+                      <td>{reservation.email}</td>
+                      <td>{reservation.area || 'N/A'}</td>
+                      <td><span className="role-badge admin">Sala</span></td>
                       <td>{formatDate(reservation.date)}</td>
                       <td>{reservation.timeRange}</td>
                       <td>
@@ -775,8 +963,56 @@ const HomeAdmin = () => {
     </div>
     {showRegister && <Register onClose={handleRegisterClose} />}
     {showCreateReserv && <CreateReserv onClose={handleCreateReservClose} />}
+    {showCreateRoomReserv && <CreateRoomReserv onClose={handleCreateRoomReservClose} />}
     {showUpdateUser && userToEdit && <UpdateUsers onClose={handleUpdateUserClose} user={userToEdit} />}
     {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
+    
+    {/* Modal de Selección de Tipo de Reservación */}
+    {showReservationTypeModal && (
+      <div className="modal-overlay" onClick={() => setShowReservationTypeModal(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowReservationTypeModal(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Seleccionar Tipo de Reservación</h1>
+            <p>Elige el tipo de reservación que deseas crear</p>
+          </div>
+
+          <div className="auth-form" style={{ gap: '1rem' }}>
+            <button 
+              onClick={() => handleReservationTypeSelect('comedor')}
+              className="btn-card primary"
+              style={{ 
+                width: '100%', 
+                padding: '1rem',
+                fontSize: '1.1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              Comedor
+            </button>
+            
+            <button 
+              onClick={() => handleReservationTypeSelect('sala')}
+              className="btn-card primary"
+              style={{ 
+                width: '100%', 
+                padding: '1rem',
+                fontSize: '1.1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+             Sala de Juntas
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     
     {showDeleteModal && userToDelete && (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && cancelDelete()}>
