@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
+    public DbSet<RoomReservation> RoomReservations => Set<RoomReservation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +35,13 @@ public class AppDbContext : DbContext
             .HasOne(r => r.TimeSlot)
             .WithMany()
             .HasForeignKey(r => r.TimeSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Relación para RoomReservation
+        modelBuilder.Entity<RoomReservation>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

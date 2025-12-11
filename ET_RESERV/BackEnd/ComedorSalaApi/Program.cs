@@ -89,6 +89,31 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Aplicar migraciones pendientes automáticamente
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    
+    Console.WriteLine("[MIGRATIONS] Verificando migraciones pendientes...");
+    var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+    
+    if (pendingMigrations.Any())
+    {
+        Console.WriteLine($"[MIGRATIONS] Aplicando {pendingMigrations.Count} migración(es) pendiente(s):");
+        foreach (var migration in pendingMigrations)
+        {
+            Console.WriteLine($"[MIGRATIONS] - {migration}");
+        }
+        
+        db.Database.Migrate();
+        Console.WriteLine("[MIGRATIONS] Migraciones aplicadas exitosamente");
+    }
+    else
+    {
+        Console.WriteLine("[MIGRATIONS] No hay migraciones pendientes");
+    }
+}
+
 // Seed TimeSlots if they don't exist
 using (var scope = app.Services.CreateScope())
 {
