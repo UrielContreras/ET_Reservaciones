@@ -102,13 +102,6 @@ export const SecureIcon = ({ size = 24, color = "currentColor" }) => (
     </svg>
 );
 export const PhoneIcon = ({ size = 24, color = "currentColor" }) => (
-<<<<<<< HEAD
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="6" y="2" width="12" height="20" rx="2" ry="2"></rect>
-        <circle cx="12" cy="18" r="1"></circle>
-    </svg>
-);
-
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="6" y="2" width="12" height="20" rx="2" ry="2"></rect>
     <circle cx="12" cy="18" r="1"></circle>

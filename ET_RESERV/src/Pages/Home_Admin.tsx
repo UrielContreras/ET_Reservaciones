@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
@@ -294,21 +294,7 @@ const HomeAdmin = () => {
     loadRoomReservations();
     loadUserProfile();
     loadAdminReservations();
-<<<<<<< HEAD
-
-    // Configurar refresco automático cada 2 minutos (120000 ms)
-    const refreshInterval = setInterval(() => {
-      loadReservations();
-      loadAdminReservations();
-      // Solo refrescamos las reservaciones para no interrumpir si el usuario está editando usuarios
-    }, 120000); // 2 minutos
-
-    // Limpiar el intervalo cuando el componente se desmonte
-    return () => clearInterval(refreshInterval);
-  }, []);
-=======
   }, [loadReservations, loadRoomReservations]);
->>>>>>> cb0ee6b (Reservacion_Sala de juntas)
 
   const handleLogout = () => {
     // Limpiar completamente el localStorage
@@ -527,13 +513,8 @@ const HomeAdmin = () => {
           <div className="dashboard-card">
             <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
             <h3>Reservaciones de Hoy</h3>
-<<<<<<< HEAD
-            <p className="card-number">{reservations.length}</p>
-            <button className="btn-card" onClick={() => handleViewChange('reservations')}>Ver todas</button>
-=======
             <p className="card-number">{reservations.length + roomReservations.length}</p>
             <button className="btn-card" onClick={() => setShowView('reservations')}>Ver todas</button>
->>>>>>> cb0ee6b (Reservacion_Sala de juntas)
           </div>
 
           <div className="dashboard-card">
@@ -863,11 +844,7 @@ const HomeAdmin = () => {
             <div className="empty-state">
               <p>Cargando reservaciones...</p>
             </div>
-<<<<<<< HEAD
-          ) : filteredAndSortedReservations.length === 0 ? (
-=======
           ) : reservations.length === 0 && roomReservations.length === 0 ? (
->>>>>>> cb0ee6b (Reservacion_Sala de juntas)
             <div className="empty-state">
               <p>No se encontraron reservaciones</p>
               <span>Intenta ajustar los filtros de búsqueda</span>
@@ -877,31 +854,6 @@ const HomeAdmin = () => {
               <table className="users-table">
                 <thead>
                   <tr>
-<<<<<<< HEAD
-                    <th onClick={() => handleReservationSort('userName')} style={{ cursor: 'pointer' }}>
-                      Usuario {reservationSortField === 'userName' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleReservationSort('email')} style={{ cursor: 'pointer' }}>
-                      Correo {reservationSortField === 'email' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleReservationSort('area')} style={{ cursor: 'pointer' }}>
-                      Área {reservationSortField === 'area' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleReservationSort('date')} style={{ cursor: 'pointer' }}>
-                      Fecha {reservationSortField === 'date' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleReservationSort('timeRange')} style={{ cursor: 'pointer' }}>
-                      Horario {reservationSortField === 'timeRange' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleReservationSort('status')} style={{ cursor: 'pointer' }}>
-                      Estado {reservationSortField === 'status' && (reservationSortDirection === 'asc' ? '↑' : '↓')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAndSortedReservations.map((reservation) => (
-                    <tr key={reservation.id}>
-=======
                     <th>Usuario</th>
                     <th>Correo</th>
                     <th>Área</th>
@@ -915,7 +867,6 @@ const HomeAdmin = () => {
                   {/* Reservaciones de Comedor */}
                   {reservations.map((reservation) => (
                     <tr key={`comedor-${reservation.id}`}>
->>>>>>> cb0ee6b (Reservacion_Sala de juntas)
                       <td>{reservation.userName}</td>
                       <td>{reservation.email}</td>
                       <td>{reservation.area || 'N/A'}</td>
