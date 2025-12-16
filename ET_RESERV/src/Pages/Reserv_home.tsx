@@ -56,9 +56,6 @@ const ReservHome = () => {
         }
       });
 
-      console.log('[FETCH_MY] Reservaciones de hoy recibidas:', response.data);
-      console.log('[FETCH_MY] Cantidad:', response.data.length);
-      
       setMyReservations(response.data);
       setLoading(false);
     } catch (err) {
@@ -108,8 +105,6 @@ const ReservHome = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        console.log('[FETCH_MY] Reservaciones de hoy recibidas:', reservResponse.data);
-        console.log('[FETCH_MY] Cantidad:', reservResponse.data.length);
         setMyReservations(reservResponse.data);
       } catch (err) {
         console.error('Error fetching reservations:', err);
@@ -134,7 +129,6 @@ const ReservHome = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        console.log('[ROOM RESERV] Reservaciones de sala de hoy:', roomResponse.data);
         setMyRoomReservations(roomResponse.data);
       } catch (err) {
         console.error('Error fetching room reservations:', err);
@@ -147,7 +141,6 @@ const ReservHome = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        console.log('[ALL ROOM RESERV] Todas las reservaciones de sala:', allRoomResponse.data);
         setAllRoomReservations(allRoomResponse.data);
       } catch (err) {
         console.error('Error fetching all room reservations:', err);

@@ -80,8 +80,7 @@ const Register = ({ onClose }: RegisterProps) => {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        area: formData.area,
-        role: formData.userType === 'admin' ? 1 : 0
+        area: formData.area
       });
 
       setSuccessMessage(`¡Registro exitoso! La contraseña temporal asignada es: "${formData.password}". Por favor, compártela con el usuario creado.`);

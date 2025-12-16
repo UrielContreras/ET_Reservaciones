@@ -47,19 +47,12 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// CORS
+// CORS - Permitir cualquier origen en Docker para facilitar acceso desde red local
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:3000",
-                "https://comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
-              )
+        policy.SetIsOriginAllowed(origin => true) // Permite cualquier origen
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -75,17 +68,18 @@ builder.Services.AddHostedService<ReservationExpirationService>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Habilitar Swagger en todos los entornos para facilitar pruebas
+app.UseSwagger();
+app.UseSwaggerUI();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 } 
-app.UseHttpsRedirection();
+
+// No redirigir a HTTPS en Docker (ngrok maneja HTTPS)
+// app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
 

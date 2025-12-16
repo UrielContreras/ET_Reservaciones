@@ -48,12 +48,6 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      console.log('Creando reservación de sala con:', {
-        date: selectedDate,
-        startTime: formattedStartTime,
-        endTime: formattedEndTime
-      });
 
       const response = await axios.post(
         `${API_BASE_URL}/api/roomreservations`,
@@ -69,7 +63,6 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
         }
       );
 
-      console.log('Respuesta del servidor:', response.data);
       alert('Reservación de sala creada exitosamente');
       onClose();
     } catch (err: unknown) {

@@ -182,29 +182,15 @@ const HomeAdmin = () => {
       setLoadingAdminReservations(true);
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('[ADMIN] No hay token');
         return;
       }
 
-      // Primero, verificar el rol del usuario
-      try {
-        const debugResponse = await axios.get(`${API_BASE_URL}/api/reservations/debug-user`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('[ADMIN] Info de usuario:', debugResponse.data);
-      } catch (err) {
-        console.error('[ADMIN] Error al obtener info del usuario:', err);
-      }
-
-      console.log('[ADMIN] Llamando a /api/reservations/my-reservations...');
       const response = await axios.get(`${API_BASE_URL}/api/reservations/my-reservations`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      console.log('[ADMIN] Reservaciones recibidas:', response.data);
-      console.log('[ADMIN] Cantidad de reservaciones:', response.data.length);
       setMyAdminReservations(response.data);
 
       // Cargar también las reservaciones de sala del admin
@@ -214,7 +200,6 @@ const HomeAdmin = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        console.log('[ADMIN] Reservaciones de sala recibidas:', roomResponse.data);
         setMyAdminRoomReservations(roomResponse.data);
       } catch (roomErr) {
         console.error('[ADMIN] Error al cargar reservaciones de sala:', roomErr);
@@ -364,7 +349,6 @@ const HomeAdmin = () => {
 
     try {
       const response = await axios.delete(`${API_BASE_URL}/api/users/${userToDelete.id}`);
-      console.log('Usuario eliminado exitosamente:', response.data);
       setShowDeleteModal(false);
       setUserToDelete(null);
       loadUsers(); // Recargar la lista de usuarios
