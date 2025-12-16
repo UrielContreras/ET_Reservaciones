@@ -54,10 +54,15 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",
-                "comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
+                "http://localhost:5174",
+                "http://localhost:5175",
+                "http://localhost:5176",
+                "http://localhost:3000",
+                "https://comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
               )
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 

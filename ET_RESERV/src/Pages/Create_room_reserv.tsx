@@ -23,8 +23,24 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
       return;
     }
 
+    // Convertir las horas a formato HH:mm de 24 horas
+    const formatTime = (time: string): string => {
+      // Si el tiempo ya está en formato HH:mm, devolverlo tal cual
+      if (/^\d{2}:\d{2}$/.test(time)) {
+        return time;
+      }
+      // Si no, crear un objeto Date y extraer la hora
+      const date = new Date(`2000-01-01T${time}`);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    };
+
+    const formattedStartTime = formatTime(startTime);
+    const formattedEndTime = formatTime(endTime);
+
     // Validar que la hora de fin sea después de la hora de inicio
-    if (endTime <= startTime) {
+    if (formattedEndTime <= formattedStartTime) {
       setError('La hora de fin debe ser después de la hora de inicio');
       return;
     }
@@ -33,12 +49,18 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      await axios.post(
+      console.log('Creando reservación de sala con:', {
+        date: selectedDate,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime
+      });
+
+      const response = await axios.post(
         `${API_BASE_URL}/api/roomreservations`,
         {
           date: selectedDate,
-          startTime: startTime,
-          endTime: endTime
+          startTime: formattedStartTime,
+          endTime: formattedEndTime
         },
         {
           headers: {
@@ -47,13 +69,30 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
         }
       );
 
+      console.log('Respuesta del servidor:', response.data);
       alert('Reservación de sala creada exitosamente');
       onClose();
     } catch (err: unknown) {
-      console.error('Error al crear reservación:', err);
+      console.error('Error completo al crear reservación:', err);
       if (axios.isAxiosError(err)) {
-        const errorMessage = err.response?.data || err.response?.data?.message || 'Error al crear la reservación';
-        setError(typeof errorMessage === 'string' ? errorMessage : 'Error al crear la reservación');
+        console.error('Response data:', err.response?.data);
+        console.error('Response status:', err.response?.status);
+        console.error('Response headers:', err.response?.headers);
+        
+        const errorData = err.response?.data;
+        let errorMessage = 'Error al crear la reservación';
+        
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else if (errorData?.errors) {
+          // Manejar errores de validación de ASP.NET
+          const validationErrors = Object.values(errorData.errors).flat();
+          errorMessage = validationErrors.join(', ');
+        }
+        
+        setError(errorMessage);
       } else {
         setError('Error al crear la reservación');
       }

@@ -46,7 +46,6 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-// ... (el resto del componente sigue igual)
     if (e.target === e.currentTarget) {
       onClose();
     }
