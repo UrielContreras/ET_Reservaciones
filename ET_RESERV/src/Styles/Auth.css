@@ -157,6 +157,43 @@
   color: #cbd5e0;
 }
 
+/* Password Input Wrapper */
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding-right: 3rem;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #718096;
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.toggle-password:hover {
+  color: #667eea;
+}
+
+.toggle-password:focus {
+  outline: none;
+}
+
 .btn-primary {
   padding: 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
