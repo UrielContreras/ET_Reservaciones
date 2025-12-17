@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ET_RESERV", "ET_RESERV", "{9F0AE87C-1640-C55C-0B8A-FFC7FE0F2F90}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BackEnd", "BackEnd", "{1928AC0C-BBF1-E0D5-C1AB-E74BA3A9D586}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComedorSalaApi", "ET_RESERV\BackEnd\ComedorSalaApi\ComedorSalaApi.csproj", "{333D760E-037E-227F-5DD5-8B06FD024892}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{333D760E-037E-227F-5DD5-8B06FD024892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{333D760E-037E-227F-5DD5-8B06FD024892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{333D760E-037E-227F-5DD5-8B06FD024892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{333D760E-037E-227F-5DD5-8B06FD024892}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1928AC0C-BBF1-E0D5-C1AB-E74BA3A9D586} = {9F0AE87C-1640-C55C-0B8A-FFC7FE0F2F90}
+		{333D760E-037E-227F-5DD5-8B06FD024892} = {1928AC0C-BBF1-E0D5-C1AB-E74BA3A9D586}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {04F6CDE8-F765-454E-963D-BE379DF99BE5}
+	EndGlobalSection
+EndGlobal
