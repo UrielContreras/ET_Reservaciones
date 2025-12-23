@@ -7,7 +7,7 @@ import CreateReserv from './Create_reserv';
 import CreateRoomReserv from './Create_room_reserv';
 import UpdateUsers from './Update_users';
 import ChangePassword from './ChangePassword';
-import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon, CalendarIcon, ClockIcon } from '../components/Icons';
+import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon, CalendarIcon, ClockIcon, SearchIcon, LoaderIcon, InfoIcon, UserIcon, DishIcon, BuildingIcon } from '../components/Icons';
 
 
 interface User {
@@ -91,6 +91,22 @@ const HomeAdmin = () => {
   const [rescheduleEndTime, setRescheduleEndTime] = useState('');
   const [rescheduleError, setRescheduleError] = useState('');
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  // Función para generar colores basados en hash (estáticos por ID)
+  const getColorFromId = (id: number): string => {
+    const colors = [
+      '#667eea', '#764ba2', '#f093fb', '#4facfe',
+      '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+      '#a8edea', '#ff6a88', '#feca57', '#48dbfb',
+      '#ff9ff3', '#54a0ff', '#00d2d3', '#1dd1a1',
+      '#ee5a6f', '#c44569', '#f8b500', '#6c5ce7',
+      '#fd79a8', '#fdcb6e', '#e17055', '#00b894',
+      '#0984e3', '#6c5ce7', '#a29bfe', '#fd79a8'
+    ];
+    
+    // Usar el ID como índice para seleccionar un color consistente
+    return colors[id % colors.length];
+  };
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -722,23 +738,28 @@ const HomeAdmin = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}>
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="🔍 Buscar por nombre, email o área..."
-                  value={reservationSearchTerm}
-                  onChange={(e) => setReservationSearchTerm(e.target.value)}
-                  style={{
-                    flex: '1 1 300px',
-                    padding: '0.75rem 1rem',
+                <div style={{ position: 'relative', flex: '1 1 300px' }}>
+                  <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+                    <SearchIcon size={20} color="#718096" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, email o área..."
+                    value={reservationSearchTerm}
+                    onChange={(e) => setReservationSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem 0.75rem 3rem',
                     border: '2px solid #e2e8f0',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     outline: 'none',
                     transition: 'border-color 0.3s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-                />
+                    onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
                 
                 <select
                   value={reservationStatusFilter}
@@ -753,12 +774,12 @@ const HomeAdmin = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <option value="all">📋 Todos los Estados</option>
-                  <option value="Active">✅ Activas</option>
-                  <option value="InProgress">⏳ En Curso</option>
-                  <option value="Cancelled">❌ Canceladas</option>
-                  <option value="Expired">⏰ Expiradas</option>
-                  <option value="Completed">✔️ Completadas</option>
+                  <option value="all">Todos los Estados</option>
+                  <option value="Active">Activas</option>
+                  <option value="InProgress">En Curso</option>
+                  <option value="Cancelled">Canceladas</option>
+                  <option value="Expired">Expiradas</option>
+                  <option value="Completed">Completadas</option>
                 </select>
 
                 <select
@@ -774,9 +795,9 @@ const HomeAdmin = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <option value="all">🏢 Todos los Tipos</option>
-                  <option value="comedor">🍽️ Comedor</option>
-                  <option value="sala">🏢 Sala de Juntas</option>
+                  <option value="all">Todos los Tipos</option>
+                  <option value="comedor">Comedor</option>
+                  <option value="sala">Sala de Juntas</option>
                 </select>
 
                 {(reservationSearchTerm || reservationStatusFilter !== 'all' || reservationTypeFilter !== 'all') && (
@@ -1006,6 +1027,9 @@ const HomeAdmin = () => {
                                 const barsToShow = totalReservations.slice(0, maxBars);
                                 const remainingCount = totalReservations.length - maxBars;
                                 
+                                // Generar colores basados en el ID de cada reservación (estáticos)
+                                const barColors = barsToShow.map(reservation => getColorFromId(reservation.id));
+                                
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: 'auto' }}>
                                     {barsToShow.map((reservation, index) => (
@@ -1014,7 +1038,7 @@ const HomeAdmin = () => {
                                         style={{
                                           height: 'auto',
                                           minHeight: '18px',
-                                          background: reservation.resType === 'comedor' ? '#22c55e' : '#3b82f6',
+                                          background: barColors[index],
                                           borderRadius: '4px',
                                           width: '100%',
                                           padding: '3px 6px',
@@ -1337,6 +1361,9 @@ const HomeAdmin = () => {
                                 const barsToShow = totalReservations.slice(0, maxBars);
                                 const remainingCount = totalReservations.length - maxBars;
                                 
+                                // Generar colores basados en el ID de cada reservación (estáticos)
+                                const barColors = barsToShow.map(reservation => getColorFromId(reservation.id));
+                                
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: 'auto' }}>
                                     {barsToShow.map((reservation, index) => (
@@ -1345,7 +1372,7 @@ const HomeAdmin = () => {
                                         style={{
                                           height: 'auto',
                                           minHeight: '18px',
-                                          background: reservation.resType === 'comedor' ? '#22c55e' : '#3b82f6',
+                                          background: barColors[index],
                                           borderRadius: '4px',
                                           width: '100%',
                                           padding: '3px 6px',
@@ -1430,7 +1457,7 @@ const HomeAdmin = () => {
                                     </div>
                                     <div className="reservation-date">
                                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#667eea', fontWeight: '600' }}>
-                                        🍽️ Comedor - {reservation.userName}
+                                        <DishIcon size={18} color="#22c55e" /> Comedor - {reservation.userName}
                                       </span>
                                       <span style={{ fontSize: '0.85rem', color: '#718096' }}>
                                         {reservation.email} · {reservation.area || 'N/A'}
@@ -1463,7 +1490,7 @@ const HomeAdmin = () => {
                                     </div>
                                     <div className="reservation-date">
                                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#764ba2', fontWeight: '600' }}>
-                                        🏢 {reservation.meetingName || 'Sala de Juntas'} - {reservation.userName}
+                                        <BuildingIcon size={18} color="#3b82f6" /> {reservation.meetingName || 'Sala de Juntas'} - {reservation.userName}
                                       </span>
                                       <span style={{ fontSize: '0.85rem', color: '#718096' }}>
                                         {reservation.email} · {reservation.area || 'N/A'}
@@ -1535,23 +1562,28 @@ const HomeAdmin = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="🔍 Buscar por nombre, apellido, email o área..."
-                  value={userSearchTerm}
-                  onChange={(e) => setUserSearchTerm(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem 1rem',
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+                    <SearchIcon size={20} color="#718096" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, apellido, email o área..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem 0.75rem 3rem',
                     border: '2px solid #e2e8f0',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     outline: 'none',
                     transition: 'border-color 0.3s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-                />
+                    onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
                 {userSearchTerm && (
                   <button
                     onClick={() => setUserSearchTerm('')}
@@ -1690,11 +1722,11 @@ const HomeAdmin = () => {
               <p style={{ margin: 0, color: '#4a5568', fontSize: '0.9rem' }}>
                 <strong>Reservación actual:</strong>
               </p>
-              <p style={{ margin: '0.5rem 0 0 0', color: '#2d3748' }}>
-                📅 {formatDate(reservationToReschedule.date)} - ⏰ {reservationToReschedule.timeRange}
+              <p style={{ margin: '0.5rem 0 0 0', color: '#2d3748', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CalendarIcon size={16} color="#667eea" /> {formatDate(reservationToReschedule.date)} <ClockIcon size={16} color="#667eea" /> {reservationToReschedule.timeRange}
               </p>
-              <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.85rem' }}>
-                👤 {reservationToReschedule.userName}
+              <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserIcon size={16} color="#718096" /> {reservationToReschedule.userName}
               </p>
             </div>
 
@@ -1753,13 +1785,16 @@ const HomeAdmin = () => {
             </div>
 
             {checkingAvailability && (
-              <div className="info-message" style={{ marginTop: '1rem' }}>
-                ⏳ Verificando disponibilidad...
+              <div className="info-message" style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <LoaderIcon size={16} color="#667eea" /> Verificando disponibilidad...
               </div>
             )}
 
-            <div className="info-message" style={{ marginTop: '1rem' }}>
-              <strong>ℹ️ Nota:</strong> La sala debe reservarse con al menos una hora de anticipación.
+            <div className="info-message" style={{ marginTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <div style={{ marginTop: '0.2rem', display: 'flex' }}>
+                <InfoIcon size={16} color="#667eea" />
+              </div>
+              <div><strong>Nota:</strong> La sala debe reservarse con al menos una hora de anticipación.</div>
             </div>
 
             <div className="button-group" style={{ marginTop: '1.5rem' }}>
