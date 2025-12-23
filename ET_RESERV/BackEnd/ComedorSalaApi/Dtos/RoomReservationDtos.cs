@@ -7,6 +7,21 @@ public class CreateRoomReservationRequest
     public string EndTime { get; set; } = null!; // formato: "HH:mm"
 }
 
+public class UpdateRoomReservationRequest
+{
+    public string Date { get; set; } = null!; // formato: "yyyy-MM-dd"
+    public string StartTime { get; set; } = null!; // formato: "HH:mm"
+    public string EndTime { get; set; } = null!; // formato: "HH:mm"
+}
+
+public class CheckAvailabilityRequest
+{
+    public string Date { get; set; } = null!; // formato: "yyyy-MM-dd"
+    public string StartTime { get; set; } = null!; // formato: "HH:mm"
+    public string EndTime { get; set; } = null!; // formato: "HH:mm"
+    public int? ExcludeReservationId { get; set; } // ID de reservación a excluir (para reprogramación)
+}
+
 public class RoomReservationDto
 {
     public int Id { get; set; }

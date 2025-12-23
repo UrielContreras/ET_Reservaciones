@@ -56,6 +56,8 @@ const HomeAdmin = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showUpdateUser, setShowUpdateUser] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [reservationToReschedule, setReservationToReschedule] = useState<RoomReservation | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -71,6 +73,23 @@ const HomeAdmin = () => {
   const [loadingAdminReservations, setLoadingAdminReservations] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Estados para filtrado y ordenamiento de usuarios
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userSortColumn, setUserSortColumn] = useState<'firstName' | 'lastName' | 'email' | 'area' | 'role'>('firstName');
+  const [userSortDirection, setUserSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Estados para filtrado de reservaciones
+  const [reservationSearchTerm, setReservationSearchTerm] = useState('');
+  const [reservationStatusFilter, setReservationStatusFilter] = useState<'all' | 'Active' | 'Cancelled' | 'Expired' | 'InProgress' | 'Completed'>('all');
+  const [reservationTypeFilter, setReservationTypeFilter] = useState<'all' | 'comedor' | 'sala'>('all');
+  
+  // Estados para reprogramación
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleStartTime, setRescheduleStartTime] = useState('');
+  const [rescheduleEndTime, setRescheduleEndTime] = useState('');
+  const [rescheduleError, setRescheduleError] = useState('');
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatDate = (dateString: string) => {
@@ -116,6 +135,79 @@ const HomeAdmin = () => {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // Función para ordenar usuarios
+  const handleUserSort = (column: typeof userSortColumn) => {
+    if (userSortColumn === column) {
+      setUserSortDirection(userSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setUserSortColumn(column);
+      setUserSortDirection('asc');
+    }
+  };
+
+  // Función para filtrar y ordenar usuarios
+  const getFilteredAndSortedUsers = () => {
+    let filtered = users.filter(user => {
+      const searchLower = userSearchTerm.toLowerCase();
+      return (
+        user.firstName.toLowerCase().includes(searchLower) ||
+        user.lastName.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        (user.area?.toLowerCase() || '').includes(searchLower)
+      );
+    });
+
+    filtered.sort((a, b) => {
+      let aValue = a[userSortColumn] || '';
+      let bValue = b[userSortColumn] || '';
+      
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+      if (aValue < bValue) return userSortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return userSortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  };
+
+  // Función para filtrar reservaciones para el calendario
+  const getFilteredReservationsForDate = (dateString: string) => {
+    let comedorReservs = reservations.filter(r => r.date === dateString);
+    let salaReservs = roomReservations.filter(r => r.date === dateString);
+
+    // Aplicar filtro de búsqueda
+    if (reservationSearchTerm) {
+      const searchLower = reservationSearchTerm.toLowerCase();
+      comedorReservs = comedorReservs.filter(r => 
+        r.userName.toLowerCase().includes(searchLower) ||
+        r.email.toLowerCase().includes(searchLower) ||
+        (r.area?.toLowerCase() || '').includes(searchLower)
+      );
+      salaReservs = salaReservs.filter(r => 
+        r.userName.toLowerCase().includes(searchLower) ||
+        r.email.toLowerCase().includes(searchLower) ||
+        (r.area?.toLowerCase() || '').includes(searchLower)
+      );
+    }
+
+    // Aplicar filtro de estado
+    if (reservationStatusFilter !== 'all') {
+      comedorReservs = comedorReservs.filter(r => r.status === reservationStatusFilter);
+      salaReservs = salaReservs.filter(r => r.status === reservationStatusFilter);
+    }
+
+    // Aplicar filtro de tipo
+    if (reservationTypeFilter === 'comedor') {
+      salaReservs = [];
+    } else if (reservationTypeFilter === 'sala') {
+      comedorReservs = [];
+    }
+
+    return { comedor: comedorReservs, sala: salaReservs };
   };
 
   const loadUsers = async () => {
@@ -285,6 +377,7 @@ const HomeAdmin = () => {
 
       alert('Reservación de sala cancelada exitosamente');
       loadAdminReservations();
+      loadRoomReservations();
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.data) {
         alert(err.response.data);
@@ -292,6 +385,152 @@ const HomeAdmin = () => {
         alert('Error al cancelar la reservación de sala');
       }
       console.error('Error al cancelar reservación de sala:', err);
+    }
+  };
+
+  const handleCancelAnyRoomReservation = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación de sala?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.put(
+        `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Reservación de sala cancelada exitosamente');
+      loadRoomReservations();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        alert(err.response.data);
+      } else {
+        alert('Error al cancelar la reservación de sala');
+      }
+      console.error('Error al cancelar reservación de sala:', err);
+    }
+  };
+
+  const handleOpenReschedule = (reservation: RoomReservation) => {
+    setReservationToReschedule(reservation);
+    setRescheduleDate('');
+    setRescheduleStartTime('');
+    setRescheduleEndTime('');
+    setRescheduleError('');
+    setShowRescheduleModal(true);
+  };
+
+  const checkTimeAvailability = async () => {
+    if (!rescheduleDate || !rescheduleStartTime || !rescheduleEndTime || !reservationToReschedule) {
+      return;
+    }
+
+    // Validar que la hora de fin sea después de la hora de inicio
+    if (rescheduleEndTime <= rescheduleStartTime) {
+      setRescheduleError('La hora de fin debe ser después de la hora de inicio');
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+      setRescheduleError('');
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // Verificar disponibilidad
+      const response = await axios.post(
+        `${API_BASE_URL}/api/roomreservations/check-availability`,
+        {
+          date: rescheduleDate,
+          startTime: rescheduleStartTime,
+          endTime: rescheduleEndTime,
+          excludeReservationId: reservationToReschedule.id
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.data.isAvailable) {
+        setRescheduleError(response.data.message || 'El horario seleccionado no está disponible');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        setRescheduleError(error.response.data);
+      } else {
+        setRescheduleError('Error al verificar disponibilidad');
+      }
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!reservationToReschedule || !rescheduleDate || !rescheduleStartTime || !rescheduleEndTime) {
+      setRescheduleError('Por favor completa todos los campos');
+      return;
+    }
+
+    if (rescheduleEndTime <= rescheduleStartTime) {
+      setRescheduleError('La hora de fin debe ser después de la hora de inicio');
+      return;
+    }
+
+    if (rescheduleError) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.put(
+        `${API_BASE_URL}/api/roomreservations/${reservationToReschedule.id}`,
+        {
+          date: rescheduleDate,
+          startTime: rescheduleStartTime,
+          endTime: rescheduleEndTime
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Reservación reprogramada exitosamente');
+      setShowRescheduleModal(false);
+      setReservationToReschedule(null);
+      setRescheduleDate('');
+      setRescheduleStartTime('');
+      setRescheduleEndTime('');
+      setRescheduleError('');
+      loadAdminReservations();
+      loadRoomReservations();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        const errorData = err.response.data;
+        if (typeof errorData === 'string') {
+          setRescheduleError(errorData);
+        } else if (errorData?.message) {
+          setRescheduleError(errorData.message);
+        } else {
+          setRescheduleError('Error al reprogramar la reservación');
+        }
+      } else {
+        setRescheduleError('Error al reprogramar la reservación');
+      }
+      console.error('Error al reprogramar reservación:', err);
     }
   };
 
@@ -480,6 +719,99 @@ const HomeAdmin = () => {
         {/* Contenido de Reservaciones */}
         {activeTab === 'reservations' && (
           <>
+            {/* Barra de búsqueda y filtros para reservaciones */}
+            <div style={{
+              marginBottom: '1rem',
+              padding: '1.5rem',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar por nombre, email o área..."
+                  value={reservationSearchTerm}
+                  onChange={(e) => setReservationSearchTerm(e.target.value)}
+                  style={{
+                    flex: '1 1 300px',
+                    padding: '0.75rem 1rem',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    transition: 'border-color 0.3s ease'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+                
+                <select
+                  value={reservationStatusFilter}
+                  onChange={(e) => setReservationStatusFilter(e.target.value as any)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  <option value="all">📋 Todos los Estados</option>
+                  <option value="Active">✅ Activas</option>
+                  <option value="InProgress">⏳ En Curso</option>
+                  <option value="Cancelled">❌ Canceladas</option>
+                  <option value="Expired">⏰ Expiradas</option>
+                  <option value="Completed">✔️ Completadas</option>
+                </select>
+
+                <select
+                  value={reservationTypeFilter}
+                  onChange={(e) => setReservationTypeFilter(e.target.value as any)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  <option value="all">🏢 Todos los Tipos</option>
+                  <option value="comedor">🍽️ Comedor</option>
+                  <option value="sala">🏢 Sala de Juntas</option>
+                </select>
+
+                {(reservationSearchTerm || reservationStatusFilter !== 'all' || reservationTypeFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setReservationSearchTerm('');
+                      setReservationStatusFilter('all');
+                      setReservationTypeFilter('all');
+                    }}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      background: '#f56565',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '1rem',
+                      transition: 'background 0.3s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#e53e3e'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#f56565'}
+                  >
+                    Limpiar Filtros
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Filtros de Reservaciones */}
             <div style={{
               display: 'flex',
@@ -790,13 +1122,22 @@ const HomeAdmin = () => {
                                        reservation.status === 'InProgress' ? 'En Curso' :
                                        reservation.status === 'Cancelled' ? 'Cancelada' : 'Expirada'}
                                     </span>
-                                    {(reservation.status === 'Active' || reservation.status === 'InProgress') && (
-                                      <button 
-                                        className="btn-cancel"
-                                        onClick={() => handleCancelAdminRoomReservation(reservation.id)}
-                                      >
-                                        Cancelar
-                                      </button>
+                                    {reservation.status === 'Active' && (
+                                      <>
+                                        <button 
+                                          className="btn-edit"
+                                          onClick={() => handleOpenReschedule(reservation)}
+                                          style={{ marginRight: '8px' }}
+                                        >
+                                          Reprogramar
+                                        </button>
+                                        <button 
+                                          className="btn-cancel"
+                                          onClick={() => handleCancelAdminRoomReservation(reservation.id)}
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </>
                                     )}
                                   </div>
                                 </div>
@@ -912,7 +1253,7 @@ const HomeAdmin = () => {
                         // Días del mes
                         for (let day = 1; day <= daysInMonth; day++) {
                           const dateString = formatDateToString(year, month, day);
-                          const { comedor, sala } = getAllReservationsForDate(dateString);
+                          const { comedor, sala } = getFilteredReservationsForDate(dateString);
                           const hasReservations = comedor.length > 0 || sala.length > 0;
                           const today = new Date();
                           const isToday = today.getDate() === day && 
@@ -993,7 +1334,7 @@ const HomeAdmin = () => {
 
                     {/* Detalle de reservaciones del día seleccionado */}
                     {selectedDate && (() => {
-                      const { comedor, sala } = getAllReservationsForDate(selectedDate);
+                      const { comedor, sala } = getFilteredReservationsForDate(selectedDate);
                       return (
                         <div style={{
                           background: 'white',
@@ -1081,6 +1422,23 @@ const HomeAdmin = () => {
                                        reservation.status === 'Expired' ? 'Expirada' : 
                                        reservation.status === 'Completed' ? 'Completada' : reservation.status}
                                     </span>
+                                    {reservation.status === 'Active' && (
+                                      <>
+                                        <button 
+                                          className="btn-edit"
+                                          onClick={() => handleOpenReschedule(reservation)}
+                                          style={{ marginLeft: '8px', marginRight: '8px' }}
+                                        >
+                                          Reprogramar
+                                        </button>
+                                        <button 
+                                          className="btn-cancel"
+                                          onClick={() => handleCancelAnyRoomReservation(reservation.id)}
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -1107,6 +1465,59 @@ const HomeAdmin = () => {
         {activeTab === 'users' && (
           <section className="recent-section">
             <h2>Todos los Usuarios del Sistema</h2>
+            
+            {/* Barra de búsqueda de usuarios */}
+            <div style={{
+              marginBottom: '1.5rem',
+              padding: '1.5rem',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar por nombre, apellido, email o área..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem 1rem',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    transition: 'border-color 0.3s ease'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+                {userSearchTerm && (
+                  <button
+                    onClick={() => setUserSearchTerm('')}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      background: '#f56565',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '1rem',
+                      transition: 'background 0.3s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#e53e3e'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#f56565'}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              <div style={{ marginTop: '0.75rem', color: '#718096', fontSize: '0.9rem' }}>
+                {getFilteredAndSortedUsers().length} de {users.length} usuarios
+              </div>
+            </div>
+            
             {loading ? (
               <div className="empty-state">
                 <p>Cargando usuarios...</p>
@@ -1121,16 +1532,46 @@ const HomeAdmin = () => {
                 <table className="users-table">
                   <thead>
                     <tr>
-                      <th>Nombre</th>
-                      <th>Apellido</th>
-                      <th>Correo</th>
-                      <th>Área</th>
-                      <th>Rol</th>
+                      <th 
+                        onClick={() => handleUserSort('firstName')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Click para ordenar"
+                      >
+                        Nombre {userSortColumn === 'firstName' && (userSortDirection === 'asc' ? '▲' : '▼')}
+                      </th>
+                      <th 
+                        onClick={() => handleUserSort('lastName')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Click para ordenar"
+                      >
+                        Apellido {userSortColumn === 'lastName' && (userSortDirection === 'asc' ? '▲' : '▼')}
+                      </th>
+                      <th 
+                        onClick={() => handleUserSort('email')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Click para ordenar"
+                      >
+                        Correo {userSortColumn === 'email' && (userSortDirection === 'asc' ? '▲' : '▼')}
+                      </th>
+                      <th 
+                        onClick={() => handleUserSort('area')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Click para ordenar"
+                      >
+                        Área {userSortColumn === 'area' && (userSortDirection === 'asc' ? '▲' : '▼')}
+                      </th>
+                      <th 
+                        onClick={() => handleUserSort('role')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Click para ordenar"
+                      >
+                        Rol {userSortColumn === 'role' && (userSortDirection === 'asc' ? '▲' : '▼')}
+                      </th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
+                    {getFilteredAndSortedUsers().map((user) => (
                       <tr key={user.id}>
                         <td>{user.firstName}</td>
                         <td>{user.lastName}</td>
@@ -1173,6 +1614,124 @@ const HomeAdmin = () => {
     {showCreateRoomReserv && <CreateRoomReserv onClose={handleCreateRoomReservClose} />}
     {showUpdateUser && userToEdit && <UpdateUsers onClose={handleUpdateUserClose} user={userToEdit} />}
     {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
+    
+    {/* Modal de Reprogramación */}
+    {showRescheduleModal && reservationToReschedule && (
+      <div className="modal-overlay" onClick={() => setShowRescheduleModal(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowRescheduleModal(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Reprogramar Reservación de Sala</h1>
+            <p>Selecciona una nueva fecha y horario</p>
+          </div>
+
+          <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleReschedule(); }}>
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
+              <p style={{ margin: 0, color: '#4a5568', fontSize: '0.9rem' }}>
+                <strong>Reservación actual:</strong>
+              </p>
+              <p style={{ margin: '0.5rem 0 0 0', color: '#2d3748' }}>
+                📅 {formatDate(reservationToReschedule.date)} - ⏰ {reservationToReschedule.timeRange}
+              </p>
+              <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.85rem' }}>
+                👤 {reservationToReschedule.userName}
+              </p>
+            </div>
+
+            {rescheduleError && (
+              <div className="error-message" style={{ marginBottom: '1rem' }}>
+                {rescheduleError}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="rescheduleDate">Nueva Fecha</label>
+              <input
+                id="rescheduleDate"
+                type="date"
+                value={rescheduleDate}
+                onChange={(e) => {
+                  setRescheduleDate(e.target.value);
+                  setRescheduleError('');
+                  if (rescheduleStartTime && rescheduleEndTime && e.target.value) {
+                    checkTimeAvailability();
+                  }
+                }}
+                min={new Date().toISOString().split('T')[0]}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="rescheduleStartTime">Hora de inicio</label>
+              <input
+                id="rescheduleStartTime"
+                type="time"
+                value={rescheduleStartTime}
+                onChange={(e) => {
+                  setRescheduleStartTime(e.target.value);
+                  setRescheduleError('');
+                }}
+                onBlur={checkTimeAvailability}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="rescheduleEndTime">Hora de fin</label>
+              <input
+                id="rescheduleEndTime"
+                type="time"
+                value={rescheduleEndTime}
+                onChange={(e) => {
+                  setRescheduleEndTime(e.target.value);
+                  setRescheduleError('');
+                }}
+                onBlur={checkTimeAvailability}
+                required
+              />
+            </div>
+
+            {checkingAvailability && (
+              <div className="info-message" style={{ marginTop: '1rem' }}>
+                ⏳ Verificando disponibilidad...
+              </div>
+            )}
+
+            <div className="info-message" style={{ marginTop: '1rem' }}>
+              <strong>ℹ️ Nota:</strong> La sala debe reservarse con al menos una hora de anticipación.
+            </div>
+
+            <div className="button-group" style={{ marginTop: '1.5rem' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowRescheduleModal(false);
+                  setRescheduleDate('');
+                  setRescheduleStartTime('');
+                  setRescheduleEndTime('');
+                  setRescheduleError('');
+                }} 
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="btn-primary"
+                disabled={!rescheduleDate || !rescheduleStartTime || !rescheduleEndTime || !!rescheduleError || checkingAvailability}
+                style={{
+                  opacity: (!rescheduleDate || !rescheduleStartTime || !rescheduleEndTime || !!rescheduleError || checkingAvailability) ? 0.5 : 1,
+                  cursor: (!rescheduleDate || !rescheduleStartTime || !rescheduleEndTime || !!rescheduleError || checkingAvailability) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {checkingAvailability ? 'Verificando...' : 'Confirmar Reprogramación'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
     
     {/* Modal de Selección de Tipo de Reservación */}
     {showReservationTypeModal && (
