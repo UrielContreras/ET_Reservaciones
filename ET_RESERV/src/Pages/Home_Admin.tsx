@@ -1135,7 +1135,7 @@ const HomeAdmin = () => {
                                     </div>
                                     <div className="reservation-date">
                                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#764ba2', fontWeight: '600' }}>
-                                         Sala de Juntas
+                                         {reservation.meetingName || 'Sala de Juntas'}
                                       </span>
                                     </div>
                                   </div>
@@ -1463,7 +1463,7 @@ const HomeAdmin = () => {
                                     </div>
                                     <div className="reservation-date">
                                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#764ba2', fontWeight: '600' }}>
-                                        🏢 Sala de Juntas - {reservation.userName}
+                                        🏢 {reservation.meetingName || 'Sala de Juntas'} - {reservation.userName}
                                       </span>
                                       <span style={{ fontSize: '0.85rem', color: '#718096' }}>
                                         {reservation.email} · {reservation.area || 'N/A'}

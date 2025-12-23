@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ComedorSalaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251223201240_AddMeetingNameToRoomReservations")]
-    partial class AddMeetingNameToRoomReservations
+    [Migration("20251223205153_AddMeetingNameToRoomReservations_v3")]
+    partial class AddMeetingNameToRoomReservations_v3
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

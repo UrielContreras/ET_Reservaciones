@@ -13,6 +13,7 @@ public class RoomReservation
 {
     public int Id { get; set; }
     public int UserId { get; set; }
+    public string? MeetingName { get; set; }
     public DateOnly Date { get; set; }
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }

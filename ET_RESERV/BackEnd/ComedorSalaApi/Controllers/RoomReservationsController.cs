@@ -47,6 +47,7 @@ public class RoomReservationsController : ControllerBase
         var result = reservations.Select(r => new RoomReservationDetailDto
         {
             Id = r.Id,
+            MeetingName = r.MeetingName,
             Date = r.Date.ToString("yyyy-MM-dd"),
             StartTime = r.StartTime.ToString("HH:mm"),
             EndTime = r.EndTime.ToString("HH:mm"),
@@ -77,6 +78,7 @@ public class RoomReservationsController : ControllerBase
         var result = reservations.Select(r => new RoomReservationDto
         {
             Id = r.Id,
+            MeetingName = r.MeetingName,
             Date = r.Date.ToString("yyyy-MM-dd"),
             StartTime = r.StartTime.ToString("HH:mm"),
             EndTime = r.EndTime.ToString("HH:mm"),
@@ -103,6 +105,7 @@ public class RoomReservationsController : ControllerBase
         var result = reservations.Select(r => new RoomReservationDto
         {
             Id = r.Id,
+            MeetingName = r.MeetingName,
             Date = r.Date.ToString("yyyy-MM-dd"),
             StartTime = r.StartTime.ToString("HH:mm"),
             EndTime = r.EndTime.ToString("HH:mm"),
@@ -237,6 +240,7 @@ public class RoomReservationsController : ControllerBase
         var reservation = new RoomReservation
         {
             UserId = userId,
+            MeetingName = request.MeetingName,
             Date = date,
             StartTime = startTime,
             EndTime = endTime,
@@ -312,6 +316,7 @@ public class RoomReservationsController : ControllerBase
             return BadRequest("Ya existe una reservación activa en ese horario");
 
         // Actualizar la reservación
+        reservation.MeetingName = request.MeetingName;
         reservation.Date = newDate;
         reservation.StartTime = newStartTime;
         reservation.EndTime = newEndTime;

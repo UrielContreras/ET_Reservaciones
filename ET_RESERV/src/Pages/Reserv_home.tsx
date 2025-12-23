@@ -18,6 +18,7 @@ interface Reservation {
 
 interface RoomReservation {
   id: number;
+  meetingName?: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -419,7 +420,7 @@ const ReservHome = () => {
                   <div className="reservation-date">
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <CalendarIcon size={18} color="#718096" /> 
-                      {formatDate(reservation.date)} - Sala de Juntas
+                      {formatDate(reservation.date)} - {reservation.meetingName || 'Sala de Juntas'}
                     </span>
                   </div>
                 </div>
@@ -504,7 +505,7 @@ const ReservHome = () => {
                       <div className="reservation-date">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <CalendarIcon size={18} color="#718096" /> 
-                          {formatDate(reservation.date)} - Sala de Juntas
+                          {formatDate(reservation.date)} - {reservation.meetingName || 'Sala de Juntas'}
                         </span>
                       </div>
                     </div>
@@ -572,7 +573,7 @@ const ReservHome = () => {
                       <div className="reservation-date">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <CalendarIcon size={18} color="#718096" /> 
-                          {formatDate(reservation.date)} - Sala de Juntas
+                          {formatDate(reservation.date)} - {reservation.meetingName || 'Sala de Juntas'}
                         </span>
                       </div>
                     </div>
@@ -634,7 +635,7 @@ const ReservHome = () => {
                       <div className="reservation-date">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <CalendarIcon size={18} color="#718096" /> 
-                          {formatDate(reservation.date)} - Sala de Juntas
+                          {formatDate(reservation.date)} - {reservation.meetingName || 'Sala de Juntas'}
                         </span>
                       </div>
                     </div>

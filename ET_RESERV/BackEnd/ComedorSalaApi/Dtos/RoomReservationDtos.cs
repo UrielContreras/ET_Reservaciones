@@ -2,6 +2,7 @@ namespace ComedorSalaApi.Dtos;
 
 public class CreateRoomReservationRequest
 {
+    public string? MeetingName { get; set; }
     public string Date { get; set; } = null!; // formato: "yyyy-MM-dd"
     public string StartTime { get; set; } = null!; // formato: "HH:mm"
     public string EndTime { get; set; } = null!; // formato: "HH:mm"
@@ -9,6 +10,7 @@ public class CreateRoomReservationRequest
 
 public class UpdateRoomReservationRequest
 {
+    public string? MeetingName { get; set; }
     public string Date { get; set; } = null!; // formato: "yyyy-MM-dd"
     public string StartTime { get; set; } = null!; // formato: "HH:mm"
     public string EndTime { get; set; } = null!; // formato: "HH:mm"
@@ -25,6 +27,7 @@ public class CheckAvailabilityRequest
 public class RoomReservationDto
 {
     public int Id { get; set; }
+    public string? MeetingName { get; set; }
     public string Date { get; set; } = null!;
     public string StartTime { get; set; } = null!;
     public string EndTime { get; set; } = null!;
@@ -35,6 +38,7 @@ public class RoomReservationDto
 public class RoomReservationDetailDto
 {
     public int Id { get; set; }
+    public string? MeetingName { get; set; }
     public string Date { get; set; } = null!;
     public string StartTime { get; set; } = null!;
     public string EndTime { get; set; } = null!;

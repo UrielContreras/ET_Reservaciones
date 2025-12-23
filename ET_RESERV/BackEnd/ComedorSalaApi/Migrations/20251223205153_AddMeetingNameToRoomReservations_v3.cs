@@ -5,7 +5,7 @@
 namespace ComedorSalaApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMeetingNameToRoomReservations : Migration
+    public partial class AddMeetingNameToRoomReservations_v3 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -1,0 +1,51 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: comedordb-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd123
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+    networks:
+      - comedor-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/1433' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build:
+      context: ./ET_RESERV/BackEnd/ComedorSalaApi
+      dockerfile: Dockerfile
+    container_name: comedor-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5001
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=ComedorDB;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True;Encrypt=False;
+      - Jwt__Key=EstaEsUnaClaveSecretaMuyLargaYSeguraParaProduccion123456
+      - Jwt__Issuer=ComedorSalaApi
+      - Jwt__Audience=ComedorSalaApp
+      - AppSettings__TimeZoneId=Central Standard Time (Mexico)
+    ports:
+      - "5001:5001"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - comedor-network
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+    driver: local
+
+networks:
+  comedor-network:
+    driver: bridge

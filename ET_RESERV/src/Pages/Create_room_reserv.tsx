@@ -59,6 +59,7 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
       const response = await axios.post(
         `${API_BASE_URL}/api/roomreservations`,
         {
+          meetingName: meetingName,
           date: selectedDate,
           startTime: formattedStartTime,
           endTime: formattedEndTime
