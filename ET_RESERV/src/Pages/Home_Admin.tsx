@@ -38,6 +38,7 @@ interface RoomReservation {
   userName: string;
   email: string;
   area: string;
+  meetingName?: string;
 }
 
 interface AdminReservation {
@@ -116,13 +117,6 @@ const HomeAdmin = () => {
     return { comedor: comedorReservs, sala: salaReservs };
   };
 
-  // Función para obtener todas las reservaciones de un día específico (Todos los usuarios)
-  const getAllReservationsForDate = (dateString: string) => {
-    const comedorReservs = reservations.filter(r => r.date === dateString);
-    const salaReservs = roomReservations.filter(r => r.date === dateString);
-    return { comedor: comedorReservs, sala: salaReservs };
-  };
-
   // Función para formatear fecha a YYYY-MM-DD
   const formatDateToString = (year: number, month: number, day: number) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -149,7 +143,7 @@ const HomeAdmin = () => {
 
   // Función para filtrar y ordenar usuarios
   const getFilteredAndSortedUsers = () => {
-    let filtered = users.filter(user => {
+    const filtered = users.filter(user => {
       const searchLower = userSearchTerm.toLowerCase();
       return (
         user.firstName.toLowerCase().includes(searchLower) ||
@@ -748,7 +742,7 @@ const HomeAdmin = () => {
                 
                 <select
                   value={reservationStatusFilter}
-                  onChange={(e) => setReservationStatusFilter(e.target.value as any)}
+                  onChange={(e) => setReservationStatusFilter(e.target.value as 'all' | 'Active' | 'InProgress' | 'Cancelled' | 'Expired' | 'Completed')}
                   style={{
                     padding: '0.75rem 1rem',
                     border: '2px solid #e2e8f0',
@@ -769,7 +763,7 @@ const HomeAdmin = () => {
 
                 <select
                   value={reservationTypeFilter}
-                  onChange={(e) => setReservationTypeFilter(e.target.value as any)}
+                  onChange={(e) => setReservationTypeFilter(e.target.value as 'all' | 'comedor' | 'sala')}
                   style={{
                     padding: '0.75rem 1rem',
                     border: '2px solid #e2e8f0',
@@ -924,19 +918,20 @@ const HomeAdmin = () => {
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(7, 1fr)',
-                      gap: '8px',
-                      marginBottom: '2rem'
+                      gap: '4px',
+                      marginBottom: '2rem',
+                      overflow: 'hidden'
                     }}>
                       {/* Encabezados de días */}
                       {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                         <div key={day} style={{
                           textAlign: 'center',
                           fontWeight: '700',
-                          padding: '0.75rem',
+                          padding: '0.5rem 0.25rem',
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           color: 'white',
-                          borderRadius: '8px',
-                          fontSize: '0.9rem'
+                          borderRadius: '6px',
+                          fontSize: '0.75rem'
                         }}>
                           {day}
                         </div>
@@ -967,17 +962,19 @@ const HomeAdmin = () => {
                               key={day}
                               onClick={() => setSelectedDate(selectedDate === dateString ? null : dateString)}
                               style={{
-                                minHeight: '80px',
-                                padding: '0.5rem',
-                                border: isToday ? '3px solid #667eea' : '2px solid #e2e8f0',
-                                borderRadius: '12px',
+                                minHeight: '60px',
+                                padding: '0.35rem',
+                                border: isToday ? '2px solid #667eea' : '1px solid #e2e8f0',
+                                borderRadius: '8px',
                                 cursor: hasReservations ? 'pointer' : 'default',
                                 background: hasReservations 
                                   ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
                                   : 'white',
                                 transition: 'all 0.3s ease',
                                 position: 'relative',
-                                boxShadow: selectedDate === dateString ? '0 4px 12px rgba(102, 126, 234, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+                                boxShadow: selectedDate === dateString ? '0 4px 12px rgba(102, 126, 234, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column'
                               }}
                               onMouseOver={(e) => {
                                 if (hasReservations) {
@@ -994,38 +991,68 @@ const HomeAdmin = () => {
                             >
                               <div style={{ 
                                 fontWeight: isToday ? '700' : '600', 
-                                marginBottom: '0.25rem',
+                                marginBottom: '0.15rem',
                                 color: isToday ? '#667eea' : '#2d3748',
-                                fontSize: '1.1rem'
+                                fontSize: '0.9rem'
                               }}>
                                 {day}
                               </div>
-                              {hasReservations && (
-                                <div style={{ fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  {comedor.length > 0 && (
-                                    <div style={{
-                                      background: '#667eea',
-                                      color: 'white',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontWeight: '600'
-                                    }}>
-                                      🍽️ {comedor.length}
-                                    </div>
-                                  )}
-                                  {sala.length > 0 && (
-                                    <div style={{
-                                      background: '#764ba2',
-                                      color: 'white',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontWeight: '600'
-                                    }}>
-                                      🏢 {sala.length}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                              {hasReservations && (() => {
+                                const totalReservations = [
+                                  ...comedor.map(r => ({ ...r, resType: 'comedor' as const })),
+                                  ...sala.map(r => ({ ...r, resType: 'sala' as const }))
+                                ];
+                                const maxBars = 3;
+                                const barsToShow = totalReservations.slice(0, maxBars);
+                                const remainingCount = totalReservations.length - maxBars;
+                                
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: 'auto' }}>
+                                    {barsToShow.map((reservation, index) => (
+                                      <div
+                                        key={index}
+                                        style={{
+                                          height: 'auto',
+                                          minHeight: '18px',
+                                          background: reservation.resType === 'comedor' ? '#22c55e' : '#3b82f6',
+                                          borderRadius: '4px',
+                                          width: '100%',
+                                          padding: '3px 6px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        <span style={{
+                                          fontSize: '0.65rem',
+                                          color: 'white',
+                                          fontWeight: '600',
+                                          textAlign: 'center',
+                                          lineHeight: '1.2',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }}>
+                                          {reservation.resType === 'comedor' 
+                                            ? 'Comedor' 
+                                            : (reservation.meetingName || 'Sala de Juntas')}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {remainingCount > 0 && (
+                                      <div style={{
+                                        fontSize: '0.6rem',
+                                        color: '#667eea',
+                                        fontWeight: '600',
+                                        textAlign: 'center',
+                                        marginTop: '2px'
+                                      }}>
+                                        +{remainingCount}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         }
@@ -1222,19 +1249,20 @@ const HomeAdmin = () => {
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(7, 1fr)',
-                      gap: '8px',
-                      marginBottom: '2rem'
+                      gap: '4px',
+                      marginBottom: '2rem',
+                      overflow: 'hidden'
                     }}>
                       {/* Encabezados de días */}
                       {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                         <div key={day} style={{
                           textAlign: 'center',
                           fontWeight: '700',
-                          padding: '0.75rem',
+                          padding: '0.5rem 0.25rem',
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           color: 'white',
-                          borderRadius: '8px',
-                          fontSize: '0.9rem'
+                          borderRadius: '6px',
+                          fontSize: '0.75rem'
                         }}>
                           {day}
                         </div>
@@ -1265,17 +1293,19 @@ const HomeAdmin = () => {
                               key={day}
                               onClick={() => setSelectedDate(selectedDate === dateString ? null : dateString)}
                               style={{
-                                minHeight: '80px',
+                                minHeight: '100px',
                                 padding: '0.5rem',
-                                border: isToday ? '3px solid #667eea' : '2px solid #e2e8f0',
-                                borderRadius: '12px',
+                                border: isToday ? '2px solid #667eea' : '1px solid #e2e8f0',
+                                borderRadius: '8px',
                                 cursor: hasReservations ? 'pointer' : 'default',
                                 background: hasReservations 
                                   ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
                                   : 'white',
                                 transition: 'all 0.3s ease',
                                 position: 'relative',
-                                boxShadow: selectedDate === dateString ? '0 4px 12px rgba(102, 126, 234, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+                                boxShadow: selectedDate === dateString ? '0 4px 12px rgba(102, 126, 234, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column'
                               }}
                               onMouseOver={(e) => {
                                 if (hasReservations) {
@@ -1292,38 +1322,68 @@ const HomeAdmin = () => {
                             >
                               <div style={{ 
                                 fontWeight: isToday ? '700' : '600', 
-                                marginBottom: '0.25rem',
+                                marginBottom: '0.15rem',
                                 color: isToday ? '#667eea' : '#2d3748',
-                                fontSize: '1.1rem'
+                                fontSize: '0.9rem'
                               }}>
                                 {day}
                               </div>
-                              {hasReservations && (
-                                <div style={{ fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  {comedor.length > 0 && (
-                                    <div style={{
-                                      background: '#667eea',
-                                      color: 'white',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontWeight: '600'
-                                    }}>
-                                      🍽️ {comedor.length}
-                                    </div>
-                                  )}
-                                  {sala.length > 0 && (
-                                    <div style={{
-                                      background: '#764ba2',
-                                      color: 'white',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontWeight: '600'
-                                    }}>
-                                      🏢 {sala.length}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                              {hasReservations && (() => {
+                                const totalReservations = [
+                                  ...comedor.map(r => ({ ...r, resType: 'comedor' as const })),
+                                  ...sala.map(r => ({ ...r, resType: 'sala' as const }))
+                                ];
+                                const maxBars = 3;
+                                const barsToShow = totalReservations.slice(0, maxBars);
+                                const remainingCount = totalReservations.length - maxBars;
+                                
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: 'auto' }}>
+                                    {barsToShow.map((reservation, index) => (
+                                      <div
+                                        key={index}
+                                        style={{
+                                          height: 'auto',
+                                          minHeight: '18px',
+                                          background: reservation.resType === 'comedor' ? '#22c55e' : '#3b82f6',
+                                          borderRadius: '4px',
+                                          width: '100%',
+                                          padding: '3px 6px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        <span style={{
+                                          fontSize: '0.65rem',
+                                          color: 'white',
+                                          fontWeight: '600',
+                                          textAlign: 'center',
+                                          lineHeight: '1.2',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }}>
+                                          {reservation.resType === 'comedor' 
+                                            ? 'Comedor' 
+                                            : (reservation.meetingName || 'Sala de Juntas')}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {remainingCount > 0 && (
+                                      <div style={{
+                                        fontSize: '0.6rem',
+                                        color: '#667eea',
+                                        fontWeight: '600',
+                                        textAlign: 'center',
+                                        marginTop: '2px'
+                                      }}>
+                                        +{remainingCount}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         }

@@ -8,6 +8,7 @@ interface CreateRoomReservProps {
 }
 
 const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
+  const [meetingName, setMeetingName] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -121,6 +122,17 @@ const CreateRoomReserv = ({ onClose }: CreateRoomReservProps) => {
             </div>
           )}
 
+          <div className="form-group">
+            <label htmlFor="meetingName">Nombre de la reunión</label>
+            <input
+              type="text"
+              id="meetingName"
+              value={meetingName}
+              onChange={(e) => setMeetingName(e.target.value)}
+              required
+            />
+          </div>
+          
           <div className="form-group">
             <label htmlFor="date">Fecha de la reunión</label>
             <input
