@@ -262,13 +262,19 @@ public class RoomReservationsController : ControllerBase
         var userId = GetCurrentUserId();
         var userRole = User.FindFirstValue(ClaimTypes.Role);
         
+        // Log para debugging
+        Console.WriteLine($"[CANCEL] ID: {id}, UserID: {userId}, Role: {userRole}");
+        
         // Si es admin, puede cancelar cualquier reservación
         var reservation = userRole == "HR" 
             ? await _db.RoomReservations.FirstOrDefaultAsync(r => r.Id == id)
             : await _db.RoomReservations.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
 
         if (reservation == null)
-            return NotFound(new { message = "Reservación no encontrada" });
+        {
+            Console.WriteLine($"[CANCEL] Reservación {id} NO ENCONTRADA para user {userId}, role: {userRole}");
+            return NotFound(new { message = $"Reservación {id} no encontrada. Usuario: {userId}, Rol: {userRole}" });
+        }
 
         if (reservation.Status != RoomReservationStatus.Active && reservation.Status != RoomReservationStatus.InProgress)
             return BadRequest(new { message = "Solo puedes cancelar reservaciones activas o en curso" });
