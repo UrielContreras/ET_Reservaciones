@@ -260,14 +260,18 @@ public class RoomReservationsController : ControllerBase
     public async Task<IActionResult> CancelRoomReservation(int id)
     {
         var userId = GetCurrentUserId();
-        var reservation = await _db.RoomReservations
-            .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        
+        // Si es admin, puede cancelar cualquier reservación
+        var reservation = userRole == "HR" 
+            ? await _db.RoomReservations.FirstOrDefaultAsync(r => r.Id == id)
+            : await _db.RoomReservations.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
 
         if (reservation == null)
-            return NotFound();
+            return NotFound(new { message = "Reservación no encontrada" });
 
-        if (reservation.Status != RoomReservationStatus.Active)
-            return BadRequest("Solo puedes cancelar reservaciones activas");
+        if (reservation.Status != RoomReservationStatus.Active && reservation.Status != RoomReservationStatus.InProgress)
+            return BadRequest(new { message = "Solo puedes cancelar reservaciones activas o en curso" });
 
         reservation.Status = RoomReservationStatus.Cancelled;
         await _db.SaveChangesAsync();

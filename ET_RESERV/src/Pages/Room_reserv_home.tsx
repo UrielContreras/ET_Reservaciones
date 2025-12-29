@@ -137,7 +137,7 @@ const RoomReservHome = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      await axios.post(
+      await axios.put(
         `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
         {},
         {
@@ -152,7 +152,10 @@ const RoomReservHome = () => {
       fetchAllReservations();
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.data) {
-        alert(err.response.data);
+        const errorMessage = typeof err.response.data === 'string' 
+          ? err.response.data 
+          : err.response.data.message || err.response.data.error || JSON.stringify(err.response.data);
+        alert(errorMessage);
       } else {
         alert('Error al cancelar la reservación de sala');
       }
