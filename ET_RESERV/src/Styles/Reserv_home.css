@@ -555,21 +555,40 @@ html, body {
 
   .reservation-actions {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .reservation-status {
     font-size: 0.7rem;
     padding: 0.25rem 0.5rem;
-    flex: 1;
+    width: 100%;
     text-align: center;
   }
 
   .btn-cancel {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.75rem;
     flex: 1;
+    min-width: 80px;
+    max-width: calc(50% - 0.25rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  .btn-edit {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.75rem;
+    flex: 1;
+    min-width: 80px;
+    max-width: calc(50% - 0.25rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
   }
 
   .time-text {
@@ -593,11 +612,26 @@ html, body {
   .reservation-status {
     font-size: 0.65rem;
     padding: 0.2rem 0.4rem;
+    width: 100%;
   }
 
   .btn-cancel {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.7rem;
+    min-width: 70px;
+    max-width: calc(50% - 0.25rem);
+  }
+
+  .btn-edit {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.7rem;
+    min-width: 70px;
+    max-width: calc(50% - 0.25rem);
+  }
+
+  .reservation-actions {
+    gap: 0.4rem;
+    justify-content: flex-start;
   }
 }
 
@@ -608,38 +642,119 @@ html, body {
     padding: 1rem 0.5rem !important;
   }
 
-  /* Reducir gap del grid en móviles */
-  .content-area > div[style*="grid-template-columns"] {
-    gap: 3px !important;
+  /* Mantener padding normal de la sección */
+  .recent-section {
+    padding: 1rem !important;
   }
 
-  /* Ajustar tamaño de las cards de días en tablets */
-  .content-area > div[style*="grid-template-columns"] > div[style*="minHeight"] {
-    min-height: 90px !important;
-    padding: 0.45rem !important;
+  /* El div wrapper del calendario tendrá el scroll */
+  .recent-section > div[style*="overflowX"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Mantener tamaño mínimo legible de las cards */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="minHeight"] {
+    min-height: 85px !important;
+    min-width: 48px !important;
+    padding: 0.4rem !important;
     font-size: 0.85rem !important;
+  }
+
+  /* Ajustar encabezados de días */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="fontWeight: '700'"] {
+    padding: 0.4rem 0.2rem !important;
+    font-size: 0.7rem !important;
+    min-width: 48px !important;
+  }
+
+  /* Ajustar números de día */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div > div:first-child {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  /* Ajustar barras de reservaciones en el calendario */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] span[style*="fontSize: '0.65rem'"] {
+    font-size: 0.6rem !important;
   }
 }
 
 @media (max-width: 480px) {
-  /* Ajustar grid para móviles pequeños */
+  /* Mantener padding de la sección */
+  .recent-section {
+    padding: 0.75rem !important;
+  }
+
+  /* El div wrapper del calendario con scroll */
+  .recent-section > div[style*="overflowX"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Grid con tamaño fijo de celdas */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] {
+    gap: 3px !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, minmax(55px, 1fr)) !important;
+  }
+
+  /* Tamaño fijo y legible para las celdas */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="minHeight"] {
+    min-height: 80px !important;
+    min-width: 55px !important;
+    padding: 0.35rem !important;
+  }
+
+  /* Números de día legibles */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div > div:first-child {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  /* Barras de reservaciones */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] span[style*="fontSize: '0.65rem'"] {
+    font-size: 0.55rem !important;
+  }
+
+  /* Contenedor de barras */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div > div > div {
+    min-height: 15px !important;
+    padding: 2px 3px !important;
+  }
+
+  /* Encabezados de días */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="fontWeight: '700'"] {
+    padding: 0.35rem 0.1rem !important;
+    font-size: 0.6rem !important;
+    min-width: 55px !important;
+  }
+
+  /* Controles del calendario - NO se mueven con el scroll */
+  .recent-section > div[style*="padding: 1rem"] button {
+    padding: 0.45rem 0.7rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Título del mes - NO se mueve con el scroll */
+  .recent-section > div[style*="padding: 1rem"] h3 {
+    font-size: 1rem !important;
+  }
+
   .content-area > div[style*="grid-template-columns"] {
     gap: 2px !important;
   }
 
-  /* Reducir aún más el tamaño de las cards en móviles pequeños */
   .content-area > div[style*="grid-template-columns"] > div[style*="minHeight"] {
     min-height: 80px !important;
     padding: 0.35rem !important;
   }
 
-  /* Ajustar el tamaño de los números de día */
   .content-area > div[style*="grid-template-columns"] > div > div[style*="fontSize"] {
     font-size: 0.8rem !important;
     margin-bottom: 0.1rem !important;
   }
 
-  /* Ajustar barras de reservaciones */
   .content-area > div[style*="grid-template-columns"] > div > div[style*="fontSize: 0.65rem"] {
     font-size: 0.6rem !important;
   }
@@ -650,26 +765,63 @@ html, body {
     font-size: 0.6rem !important;
   }
 
-  /* Ajustar encabezados de días */
   .content-area > div[style*="grid-template-columns"] > div[style*="padding: 0.5rem 0.25rem"] {
     padding: 0.4rem 0.2rem !important;
     font-size: 0.65rem !important;
   }
 
-  /* Reducir padding de controles del calendario */
   .content-area > div[style*="display: flex"] button {
     padding: 0.5rem !important;
     font-size: 0.9rem !important;
   }
 
-  /* Ajustar secciones de cards */
   .reserv-section {
     padding: 1rem 0.5rem !important;
   }
 }
 
 @media (max-width: 360px) {
-  /* Para pantallas muy pequeñas */
+  /* Para pantallas muy pequeñas - solo el calendario scrollable */
+  .recent-section > div[style*="overflowX"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Grid con ancho mínimo para scroll */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] {
+    grid-template-columns: repeat(7, minmax(50px, 1fr)) !important;
+    gap: 2px !important;
+  }
+
+  /* Celdas con tamaño mínimo legible */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="minHeight"] {
+    min-height: 75px !important;
+    min-width: 50px !important;
+    padding: 0.3rem !important;
+  }
+
+  /* Números de día */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div > div:first-child {
+    font-size: 0.75rem !important;
+  }
+
+  /* Barras de reservaciones */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div > div > div {
+    min-height: 14px !important;
+    padding: 1px 2px !important;
+  }
+
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] span[style*="fontSize: '0.65rem'"] {
+    font-size: 0.5rem !important;
+  }
+
+  /* Encabezados */
+  .recent-section > div[style*="overflowX"] > div[style*="grid-template-columns"] > div[style*="fontWeight: '700'"] {
+    padding: 0.3rem 0.1rem !important;
+    font-size: 0.55rem !important;
+    min-width: 50px !important;
+  }
+
   .content-area > div[style*="grid-template-columns"] > div[style*="minHeight"] {
     min-height: 70px !important;
     padding: 0.25rem !important;
@@ -679,12 +831,10 @@ html, body {
     gap: 1px !important;
   }
 
-  /* Hacer números de día más pequeños */
   .content-area > div[style*="grid-template-columns"] > div > div[style*="fontSize"] {
     font-size: 0.7rem !important;
   }
 
-  /* Reducir tamaño de barras en pantallas muy pequeñas */
   .content-area > div[style*="grid-template-columns"] > div > div > div[style*="minHeight: 18px"] {
     min-height: 14px !important;
     padding: 1px 3px !important;

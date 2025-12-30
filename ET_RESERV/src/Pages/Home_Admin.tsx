@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { API_BASE_URL } from '../apiConfig';
+import { useState, useEffect } from 'react';
+import * as userService from '../services/userService';
 import '../Styles/Reserv_home.css';
 import Register from './Register';
 import CreateReserv from './Create_reserv';
@@ -8,196 +7,109 @@ import CreateRoomReserv from './Create_room_reserv';
 import UpdateUsers from './Update_users';
 import ChangePassword from './ChangePassword';
 import { ChartIcon, UsersIcon, PlusIcon, TrashIcon, EditIcon, BriefcaseIcon, CalendarIcon, ClockIcon, SearchIcon, LoaderIcon, InfoIcon, UserIcon, DishIcon, BuildingIcon } from '../components/Icons';
+import { getColorFromId, formatDate, getDaysInMonth, 
+        formatDateToString, getTodayDate} from '../utils/Functions';
+import { useUserManagement } from '../hooks/useUserManagement';
+import { useReservationFilters } from '../hooks/useReservationFilters';
+import { useReservations } from '../hooks/useReservations';
+import { useRoomReservations } from '../hooks/useRoomReservations';
+import type { User, Reservation, RoomReservation } from '../types';
 
-
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  area: string;
-  role: string;
-}
-
-interface Reservation {
-  id: number;
-  date: string;
-  timeRange: string;
-  status: string;
-  userName: string;
-  email: string;
-  area: string;
-  type?: 'comedor' | 'sala';
-}
-
-interface RoomReservation {
-  id: number;
-  date: string;
-  timeRange: string;
-  status: string;
-  userName: string;
-  email: string;
-  area: string;
-  meetingName?: string;
-}
-
-interface AdminReservation {
-  id: number;
-  date: string;
-  timeSlotId: number;
-  timeRange: string;
-  status: string;
-}
 
 const HomeAdmin = () => {
+  // Hook personalizado para gestión de usuarios
+  const {
+    users,
+    loading: loadingUsers,
+    filteredUsers,
+    userSearchTerm,
+    setUserSearchTerm,
+    userSortColumn,
+    userSortDirection,
+    handleUserSort,
+    deleteModal,
+    openDeleteModal,
+    confirmDelete,
+    cancelDelete,
+    userToEdit,
+    showUpdateUser,
+    editUser,
+    closeUpdateUser,
+    loadUsers
+  } = useUserManagement();
+
+  // Hook personalizado para filtros de reservaciones
+  const {
+    reservationSearchTerm,
+    setReservationSearchTerm,
+    reservationStatusFilter,
+    setReservationStatusFilter,
+    reservationTypeFilter,
+    setReservationTypeFilter,
+    reservationFilter,
+    setReservationFilter,
+    currentDate,
+    selectedDate,
+    clearFilters,
+    hasActiveFilters,
+    goToPreviousMonth,
+    goToNextMonth,
+    toggleDateSelection
+  } = useReservationFilters();
+
+  // Hook personalizado para gestión de reservaciones del comedor
+  const {
+    reservations,
+    myAdminReservations,
+    loadingReservations,
+    loadingAdminReservations,
+    loadReservations,
+    loadAdminReservations,
+    handleCancelAdminReservation,
+    getFilteredReservationsForDate: getFilteredComedorReservations
+  } = useReservations();
+
+  // Hook personalizado para gestión de reservaciones de salas
+  const {
+    roomReservations,
+    myAdminRoomReservations,
+    showRescheduleModal,
+    setShowRescheduleModal,
+    reservationToReschedule,
+    rescheduleDate,
+    setRescheduleDate,
+    rescheduleStartTime,
+    setRescheduleStartTime,
+    rescheduleEndTime,
+    setRescheduleEndTime,
+    rescheduleError,
+    setRescheduleError,
+    checkingAvailability,
+    loadRoomReservations,
+    loadAdminRoomReservations,
+    handleCancelAdminRoomReservation,
+    handleCancelAnyRoomReservation,
+    handleOpenReschedule,
+    checkTimeAvailability,
+    handleReschedule
+  } = useRoomReservations();
+
   const [showRegister, setShowRegister] = useState(false);
   const [showCreateReserv, setShowCreateReserv] = useState(false);
   const [showCreateRoomReserv, setShowCreateRoomReserv] = useState(false);
   const [showReservationTypeModal, setShowReservationTypeModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showUpdateUser, setShowUpdateUser] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [reservationToReschedule, setReservationToReschedule] = useState<RoomReservation | null>(null);
-  const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
-  const [userToEdit, setUserToEdit] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [roomReservations, setRoomReservations] = useState<RoomReservation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingReservations, setLoadingReservations] = useState(true);
   const [activeTab, setActiveTab] = useState<'reservations' | 'users'>('reservations');
-  const [reservationFilter, setReservationFilter] = useState<'all' | 'admin'>('all');
   const [userName, setUserName] = useState<string>('');
-  const [myAdminReservations, setMyAdminReservations] = useState<AdminReservation[]>([]);
-  const [myAdminRoomReservations, setMyAdminRoomReservations] = useState<RoomReservation[]>([]);
-  const [loadingAdminReservations, setLoadingAdminReservations] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  
-  // Estados para filtrado y ordenamiento de usuarios
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [userSortColumn, setUserSortColumn] = useState<'firstName' | 'lastName' | 'email' | 'area' | 'role'>('firstName');
-  const [userSortDirection, setUserSortDirection] = useState<'asc' | 'desc'>('asc');
-  
-  // Estados para filtrado de reservaciones
-  const [reservationSearchTerm, setReservationSearchTerm] = useState('');
-  const [reservationStatusFilter, setReservationStatusFilter] = useState<'all' | 'Active' | 'Cancelled' | 'Expired' | 'InProgress' | 'Completed'>('all');
-  const [reservationTypeFilter, setReservationTypeFilter] = useState<'all' | 'comedor' | 'sala'>('all');
-  
-  // Estados para reprogramación
-  const [rescheduleDate, setRescheduleDate] = useState('');
-  const [rescheduleStartTime, setRescheduleStartTime] = useState('');
-  const [rescheduleEndTime, setRescheduleEndTime] = useState('');
-  const [rescheduleError, setRescheduleError] = useState('');
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  // Función para generar colores basados en hash (estáticos por ID)
-  const getColorFromId = (id: number): string => {
-    const colors = [
-      '#667eea', '#764ba2', '#f093fb', '#4facfe',
-      '#43e97b', '#fa709a', '#fee140', '#30cfd0',
-      '#a8edea', '#ff6a88', '#feca57', '#48dbfb',
-      '#ff9ff3', '#54a0ff', '#00d2d3', '#1dd1a1',
-      '#ee5a6f', '#c44569', '#f8b500', '#6c5ce7',
-      '#fd79a8', '#fdcb6e', '#e17055', '#00b894',
-      '#0984e3', '#6c5ce7', '#a29bfe', '#fd79a8'
-    ];
-    
-    // Usar el ID como índice para seleccionar un color consistente
-    return colors[id % colors.length];
-  };
-
-  // Función para formatear fecha sin problemas de zona horaria
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-');
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-MX');
-  };
-
-  // Función para obtener días del mes
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    return { daysInMonth, startingDayOfWeek, year, month };
-  };
-
-  // Función para obtener reservaciones de un día específico (Admin)
-  const getReservationsForDate = (dateString: string) => {
-    const comedorReservs = myAdminReservations.filter(r => r.date === dateString);
-    const salaReservs = myAdminRoomReservations.filter(r => r.date === dateString);
-    return { comedor: comedorReservs, sala: salaReservs };
-  };
-
-  // Función para formatear fecha a YYYY-MM-DD
-  const formatDateToString = (year: number, month: number, day: number) => {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  };
-
-  // Función para obtener la fecha de hoy en formato YYYY-MM-DD
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Función para ordenar usuarios
-  const handleUserSort = (column: typeof userSortColumn) => {
-    if (userSortColumn === column) {
-      setUserSortDirection(userSortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setUserSortColumn(column);
-      setUserSortDirection('asc');
-    }
-  };
-
-  // Función para filtrar y ordenar usuarios
-  const getFilteredAndSortedUsers = () => {
-    const filtered = users.filter(user => {
-      const searchLower = userSearchTerm.toLowerCase();
-      return (
-        user.firstName.toLowerCase().includes(searchLower) ||
-        user.lastName.toLowerCase().includes(searchLower) ||
-        user.email.toLowerCase().includes(searchLower) ||
-        (user.area?.toLowerCase() || '').includes(searchLower)
-      );
-    });
-
-    filtered.sort((a, b) => {
-      let aValue = a[userSortColumn] || '';
-      let bValue = b[userSortColumn] || '';
-      
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
-      if (aValue < bValue) return userSortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return userSortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  };
-
-  // Función para filtrar reservaciones para el calendario
+  // Función para filtrar reservaciones para el calendario (incluye salas)
   const getFilteredReservationsForDate = (dateString: string) => {
-    let comedorReservs = reservations.filter(r => r.date === dateString);
-    let salaReservs = roomReservations.filter(r => r.date === dateString);
+    let salaReservs = roomReservations.filter((r: RoomReservation) => r.date === dateString);
 
     // Aplicar filtro de búsqueda
     if (reservationSearchTerm) {
       const searchLower = reservationSearchTerm.toLowerCase();
-      comedorReservs = comedorReservs.filter(r => 
-        r.userName.toLowerCase().includes(searchLower) ||
-        r.email.toLowerCase().includes(searchLower) ||
-        (r.area?.toLowerCase() || '').includes(searchLower)
-      );
-      salaReservs = salaReservs.filter(r => 
+      salaReservs = salaReservs.filter((r: RoomReservation) => 
         r.userName.toLowerCase().includes(searchLower) ||
         r.email.toLowerCase().includes(searchLower) ||
         (r.area?.toLowerCase() || '').includes(searchLower)
@@ -206,347 +118,72 @@ const HomeAdmin = () => {
 
     // Aplicar filtro de estado
     if (reservationStatusFilter !== 'all') {
-      comedorReservs = comedorReservs.filter(r => r.status === reservationStatusFilter);
-      salaReservs = salaReservs.filter(r => r.status === reservationStatusFilter);
+      salaReservs = salaReservs.filter((r: RoomReservation) => r.status === reservationStatusFilter);
     }
 
-    // Aplicar filtro de tipo
+    // Obtener reservaciones de comedor filtradas desde el hook
+    const comedorReservs = reservationTypeFilter === 'sala' 
+      ? [] 
+      : getFilteredComedorReservations(
+          dateString, 
+          reservationSearchTerm, 
+          reservationStatusFilter, 
+          reservationTypeFilter
+        );
+
     if (reservationTypeFilter === 'comedor') {
       salaReservs = [];
-    } else if (reservationTypeFilter === 'sala') {
-      comedorReservs = [];
     }
 
     return { comedor: comedorReservs, sala: salaReservs };
   };
 
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/users`);
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error);
-    } finally {
-      setLoading(false);
+  // Función para filtrar MIS reservaciones (del administrador actual)
+  const getFilteredMyReservationsForDate = (dateString: string) => {
+    let myComedorReservs = myAdminReservations.filter((r: Reservation) => r.date === dateString);
+    let mySalaReservs = myAdminRoomReservations.filter((r: RoomReservation) => r.date === dateString);
+
+    // Aplicar filtro de búsqueda
+    if (reservationSearchTerm) {
+      const searchLower = reservationSearchTerm.toLowerCase();
+      
+      myComedorReservs = myComedorReservs.filter((r: Reservation) => 
+        r.userName.toLowerCase().includes(searchLower) ||
+        r.email.toLowerCase().includes(searchLower)
+      );
+
+      mySalaReservs = mySalaReservs.filter((r: RoomReservation) => 
+        r.userName.toLowerCase().includes(searchLower) ||
+        r.email.toLowerCase().includes(searchLower) ||
+        (r.area?.toLowerCase() || '').includes(searchLower)
+      );
     }
+
+    // Aplicar filtro de estado
+    if (reservationStatusFilter !== 'all') {
+      myComedorReservs = myComedorReservs.filter((r: Reservation) => r.status === reservationStatusFilter);
+      mySalaReservs = mySalaReservs.filter((r: RoomReservation) => r.status === reservationStatusFilter);
+    }
+
+    // Aplicar filtro de tipo
+    if (reservationTypeFilter === 'comedor') {
+      mySalaReservs = [];
+    } else if (reservationTypeFilter === 'sala') {
+      myComedorReservs = [];
+    }
+
+    return { comedor: myComedorReservs, sala: mySalaReservs };
   };
-
-  const loadReservations = useCallback(async () => {
-    try {
-      setLoadingReservations(true);
-      const response = await axios.get(`${API_BASE_URL}/api/reservations/all`);
-      // Cargar todas las reservaciones para el calendario
-      setReservations(response.data);
-    } catch (error) {
-      console.error('Error al cargar reservaciones:', error);
-    } finally {
-      setLoadingReservations(false);
-    }
-  }, []);
-
-  const loadRoomReservations = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await axios.get(`${API_BASE_URL}/api/roomreservations/all`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      // Cargar todas las reservaciones de sala para el calendario
-      setRoomReservations(response.data);
-    } catch (error) {
-      console.error('Error al cargar reservaciones de sala:', error);
-    }
-  }, []);
 
   const loadUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get(`${API_BASE_URL}/api/profile/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      setUserName(response.data.firstName);
+      const profile = await userService.getCurrentUserProfile();
+      setUserName(profile.firstName);
     } catch (error) {
       console.error('Error al cargar perfil del usuario:', error);
-    }
-  };
-
-  const loadAdminReservations = async () => {
-    try {
-      setLoadingAdminReservations(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('[ADMIN] No hay token');
-        return;
-      }
-
-      // Primero, verificar el rol del usuario
-      try {
-        const debugResponse = await axios.get(`${API_BASE_URL}/api/reservations/debug-user`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('[ADMIN] Info de usuario:', debugResponse.data);
-      } catch (err) {
-        console.error('[ADMIN] Error al obtener info del usuario:', err);
-      }
-
-      console.log('[ADMIN] Llamando a /api/reservations/my-reservations...');
-      const response = await axios.get(`${API_BASE_URL}/api/reservations/my-reservations`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      console.log('[ADMIN] Reservaciones recibidas:', response.data);
-      console.log('[ADMIN] Cantidad de reservaciones:', response.data.length);
-      setMyAdminReservations(response.data);
-
-      // Cargar también las reservaciones de sala del admin
-      try {
-        const roomResponse = await axios.get(`${API_BASE_URL}/api/roomreservations/my-reservations`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        console.log('[ADMIN] Reservaciones de sala recibidas:', roomResponse.data);
-        setMyAdminRoomReservations(roomResponse.data);
-      } catch (roomErr) {
-        console.error('[ADMIN] Error al cargar reservaciones de sala:', roomErr);
-      }
-    } catch (error: unknown) {
-      console.error('[ADMIN] Error al cargar reservaciones:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('[ADMIN] Status:', error.response?.status);
-        console.error('[ADMIN] Data:', error.response?.data);
-        if (error.response?.status === 403) {
-          console.error('[ADMIN] Error 403: No tienes permisos. Necesitas cerrar sesión y volver a iniciar sesión.');
-        }
-      }
-    } finally {
-      setLoadingAdminReservations(false);
-    }
-  };
-
-  const handleCancelAdminReservation = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await axios.post(
-        `${API_BASE_URL}/api/reservations/${id}/cancel`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      alert('Reservación cancelada exitosamente');
-      loadAdminReservations();
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        alert(err.response.data);
-      } else {
-        alert('Error al cancelar la reservación');
-      }
-      console.error('Error al cancelar reservación:', err);
-    }
-  };
-
-  const handleCancelAdminRoomReservation = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación de sala?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await axios.put(
-        `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      alert('Reservación de sala cancelada exitosamente');
-      loadAdminReservations();
-      loadRoomReservations();
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const errorMessage = typeof err.response.data === 'string' 
-          ? err.response.data 
-          : err.response.data.message || err.response.data.error || JSON.stringify(err.response.data);
-        alert(errorMessage);
-      } else {
-        alert('Error al cancelar la reservación de sala');
-      }
-      console.error('Error al cancelar reservación de sala:', err);
-    }
-  };
-
-  const handleCancelAnyRoomReservation = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas cancelar esta reservación de sala?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await axios.put(
-        `${API_BASE_URL}/api/roomreservations/${id}/cancel`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      alert('Reservación de sala cancelada exitosamente');
-      loadRoomReservations();
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const errorMessage = typeof err.response.data === 'string' 
-          ? err.response.data 
-          : err.response.data.message || err.response.data.error || JSON.stringify(err.response.data);
-        alert(errorMessage);
-      } else {
-        alert('Error al cancelar la reservación de sala');
-      }
-      console.error('Error al cancelar reservación de sala:', err);
-    }
-  };
-
-  const handleOpenReschedule = (reservation: RoomReservation) => {
-    setReservationToReschedule(reservation);
-    setRescheduleDate('');
-    setRescheduleStartTime('');
-    setRescheduleEndTime('');
-    setRescheduleError('');
-    setShowRescheduleModal(true);
-  };
-
-  const checkTimeAvailability = async () => {
-    if (!rescheduleDate || !rescheduleStartTime || !rescheduleEndTime || !reservationToReschedule) {
-      return;
-    }
-
-    // Validar que la hora de fin sea después de la hora de inicio
-    if (rescheduleEndTime <= rescheduleStartTime) {
-      setRescheduleError('La hora de fin debe ser después de la hora de inicio');
-      return;
-    }
-
-    try {
-      setCheckingAvailability(true);
-      setRescheduleError('');
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      // Verificar disponibilidad
-      const response = await axios.post(
-        `${API_BASE_URL}/api/roomreservations/check-availability`,
-        {
-          date: rescheduleDate,
-          startTime: rescheduleStartTime,
-          endTime: rescheduleEndTime,
-          excludeReservationId: reservationToReschedule.id
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.data.isAvailable) {
-        setRescheduleError(response.data.message || 'El horario seleccionado no está disponible');
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data) {
-        setRescheduleError(error.response.data);
-      } else {
-        setRescheduleError('Error al verificar disponibilidad');
-      }
-    } finally {
-      setCheckingAvailability(false);
-    }
-  };
-
-  const handleReschedule = async () => {
-    if (!reservationToReschedule || !rescheduleDate || !rescheduleStartTime || !rescheduleEndTime) {
-      setRescheduleError('Por favor completa todos los campos');
-      return;
-    }
-
-    if (rescheduleEndTime <= rescheduleStartTime) {
-      setRescheduleError('La hora de fin debe ser después de la hora de inicio');
-      return;
-    }
-
-    if (rescheduleError) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await axios.put(
-        `${API_BASE_URL}/api/roomreservations/${reservationToReschedule.id}`,
-        {
-          date: rescheduleDate,
-          startTime: rescheduleStartTime,
-          endTime: rescheduleEndTime
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      alert('Reservación reprogramada exitosamente');
-      setShowRescheduleModal(false);
-      setReservationToReschedule(null);
-      setRescheduleDate('');
-      setRescheduleStartTime('');
-      setRescheduleEndTime('');
-      setRescheduleError('');
-      loadAdminReservations();
-      loadRoomReservations();
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const errorData = err.response.data;
-        if (typeof errorData === 'string') {
-          setRescheduleError(errorData);
-        } else if (errorData?.message) {
-          setRescheduleError(errorData.message);
-        } else {
-          setRescheduleError('Error al reprogramar la reservación');
-        }
-      } else {
-        setRescheduleError('Error al reprogramar la reservación');
-      }
-      console.error('Error al reprogramar reservación:', err);
     }
   };
 
@@ -556,7 +193,9 @@ const HomeAdmin = () => {
     loadRoomReservations();
     loadUserProfile();
     loadAdminReservations();
-  }, [loadReservations, loadRoomReservations]);
+    loadAdminRoomReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar el componente
 
   const handleLogout = () => {
     // Limpiar completamente el localStorage
@@ -587,6 +226,7 @@ const HomeAdmin = () => {
     setShowCreateRoomReserv(false);
     loadRoomReservations(); // Recargar reservaciones de sala después de crear una nueva
     loadAdminReservations(); // Recargar también las reservaciones del admin
+    loadAdminRoomReservations(); // Recargar las reservaciones de sala del admin
   };
 
   const handleReservationTypeSelect = (type: 'comedor' | 'sala') => {
@@ -598,46 +238,10 @@ const HomeAdmin = () => {
     }
   };
 
-  const handleDeleteUser = (userId: number, userName: string) => {
-    setUserToDelete({ id: userId, name: userName });
-    setShowDeleteModal(true);
-  };
-
-  const handleEditUser = (user: User) => {
-    setUserToEdit(user);
-    setShowUpdateUser(true);
-  };
-
+  // Alias para mantener compatibilidad
   const handleUpdateUserClose = () => {
-    setShowUpdateUser(false);
-    setUserToEdit(null);
-    loadUsers(); // Recargar usuarios después de actualizar
-  };
-
-  const confirmDelete = async () => {
-    if (!userToDelete) return;
-
-    try {
-      const response = await axios.delete(`${API_BASE_URL}/api/users/${userToDelete.id}`);
-      console.log('Usuario eliminado exitosamente:', response.data);
-      setShowDeleteModal(false);
-      setUserToDelete(null);
-      loadUsers(); // Recargar la lista de usuarios
-    } catch (error: unknown) {
-      console.error('Error completo al dar de baja usuario:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Respuesta del servidor:', error.response?.data);
-        console.error('Status:', error.response?.status);
-        const errorMessage = error.response?.data?.message || error.response?.data || 'Error al dar de baja el usuario. Por favor intenta de nuevo.';
-        alert(`Error: ${errorMessage}`);
-      } else {
-        alert('Error al dar de baja el usuario. Por favor intenta de nuevo.');
-      }
-    }
-  };
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setUserToDelete(null);
+    closeUpdateUser();
+    loadUsers();
   };
 
   return (
@@ -693,8 +297,8 @@ const HomeAdmin = () => {
             <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
             <h3>Reservaciones de Hoy</h3>
             <p className="card-number">{
-              reservations.filter(r => r.date === getTodayDate()).length + 
-              roomReservations.filter(r => r.date === getTodayDate()).length
+              reservations.filter((r: Reservation) => r.date === getTodayDate()).length + 
+              roomReservations.filter((r: RoomReservation) => r.date === getTodayDate()).length
             }</p>
             <button className="btn-card" onClick={() => setActiveTab('reservations')}>Ver todas</button>
           </div>
@@ -806,13 +410,9 @@ const HomeAdmin = () => {
                   <option value="sala">Sala de Juntas</option>
                 </select>
 
-                {(reservationSearchTerm || reservationStatusFilter !== 'all' || reservationTypeFilter !== 'all') && (
+                {hasActiveFilters() && (
                   <button
-                    onClick={() => {
-                      setReservationSearchTerm('');
-                      setReservationStatusFilter('all');
-                      setReservationTypeFilter('all');
-                    }}
+                    onClick={clearFilters}
                     style={{
                       padding: '0.75rem 1rem',
                       background: '#f56565',
@@ -897,7 +497,7 @@ const HomeAdmin = () => {
                   color: 'white'
                 }}>
                   <button
-                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
+                    onClick={goToPreviousMonth}
                     style={{
                       background: 'rgba(255,255,255,0.2)',
                       border: 'none',
@@ -917,7 +517,7 @@ const HomeAdmin = () => {
                     {currentDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }).toUpperCase()}
                   </h3>
                   <button
-                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
+                    onClick={goToNextMonth}
                     style={{
                       background: 'rgba(255,255,255,0.2)',
                       border: 'none',
@@ -941,14 +541,20 @@ const HomeAdmin = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Calendario */}
+                    {/* Contenedor scrollable del Calendario */}
                     <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(7, 1fr)',
-                      gap: '4px',
-                      marginBottom: '2rem',
-                      overflow: 'hidden'
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                      WebkitOverflowScrolling: 'touch',
+                      marginBottom: '2rem'
                     }}>
+                      {/* Calendario */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
+                        gap: '4px',
+                        minWidth: '100%'
+                      }}>
                       {/* Encabezados de días */}
                       {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                         <div key={day} style={{
@@ -977,7 +583,7 @@ const HomeAdmin = () => {
                         // Días del mes
                         for (let day = 1; day <= daysInMonth; day++) {
                           const dateString = formatDateToString(year, month, day);
-                          const { comedor, sala } = getReservationsForDate(dateString);
+                          const { comedor, sala } = getFilteredMyReservationsForDate(dateString);
                           const hasReservations = comedor.length > 0 || sala.length > 0;
                           const today = new Date();
                           const isToday = today.getDate() === day && 
@@ -987,7 +593,7 @@ const HomeAdmin = () => {
                           days.push(
                             <div
                               key={day}
-                              onClick={() => setSelectedDate(selectedDate === dateString ? null : dateString)}
+                              onClick={() => toggleDateSelection(dateString)}
                               style={{
                                 minHeight: '60px',
                                 padding: '0.35rem',
@@ -1026,8 +632,8 @@ const HomeAdmin = () => {
                               </div>
                               {hasReservations && (() => {
                                 const totalReservations = [
-                                  ...comedor.map(r => ({ ...r, resType: 'comedor' as const })),
-                                  ...sala.map(r => ({ ...r, resType: 'sala' as const }))
+                                  ...comedor.map((r: Reservation) => ({ ...r, resType: 'comedor' as const })),
+                                  ...sala.map((r: RoomReservation) => ({ ...r, resType: 'sala' as const }))
                                 ];
                                 const maxBars = 3;
                                 const barsToShow = totalReservations.slice(0, maxBars);
@@ -1089,11 +695,12 @@ const HomeAdmin = () => {
                         
                         return days;
                       })()}
+                      </div>
                     </div>
 
                     {/* Detalle de reservaciones del día seleccionado */}
                     {selectedDate && (() => {
-                      const { comedor, sala } = getReservationsForDate(selectedDate);
+                      const { comedor, sala } = getFilteredMyReservationsForDate(selectedDate);
                       return (
                         <div style={{
                           background: 'white',
@@ -1153,10 +760,10 @@ const HomeAdmin = () => {
                                     )}
                                   </div>
                                 </div>
-                              ))}
+                              ))}  
                               
                               {/* Reservaciones de Sala */}
-                              {sala.map((reservation) => (
+                              {sala.map((reservation: RoomReservation) => (
                                 <div key={`sala-${reservation.id}`} className="reservation-card">
                                   <div className="reservation-info">
                                     <div className="reservation-time">
@@ -1190,7 +797,7 @@ const HomeAdmin = () => {
                                         </button>
                                         <button 
                                           className="btn-cancel"
-                                          onClick={() => handleCancelAdminRoomReservation(reservation.id)}
+                                          onClick={() => handleCancelAdminRoomReservation(reservation.id, loadAdminReservations)}
                                         >
                                           Cancelar
                                         </button>
@@ -1231,7 +838,7 @@ const HomeAdmin = () => {
                   color: 'white'
                 }}>
                   <button
-                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
+                    onClick={goToPreviousMonth}
                     style={{
                       background: 'rgba(255,255,255,0.2)',
                       border: 'none',
@@ -1251,7 +858,7 @@ const HomeAdmin = () => {
                     {currentDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }).toUpperCase()}
                   </h3>
                   <button
-                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
+                    onClick={goToNextMonth}
                     style={{
                       background: 'rgba(255,255,255,0.2)',
                       border: 'none',
@@ -1275,14 +882,20 @@ const HomeAdmin = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Calendario */}
+                    {/* Contenedor scrollable del Calendario */}
                     <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(7, 1fr)',
-                      gap: '4px',
-                      marginBottom: '2rem',
-                      overflow: 'hidden'
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                      WebkitOverflowScrolling: 'touch',
+                      marginBottom: '2rem'
                     }}>
+                      {/* Calendario */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
+                        gap: '4px',
+                        minWidth: '100%'
+                      }}>
                       {/* Encabezados de días */}
                       {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                         <div key={day} style={{
@@ -1321,7 +934,7 @@ const HomeAdmin = () => {
                           days.push(
                             <div
                               key={day}
-                              onClick={() => setSelectedDate(selectedDate === dateString ? null : dateString)}
+                              onClick={() => toggleDateSelection(dateString)}
                               style={{
                                 minHeight: '100px',
                                 padding: '0.5rem',
@@ -1360,8 +973,8 @@ const HomeAdmin = () => {
                               </div>
                               {hasReservations && (() => {
                                 const totalReservations = [
-                                  ...comedor.map(r => ({ ...r, resType: 'comedor' as const })),
-                                  ...sala.map(r => ({ ...r, resType: 'sala' as const }))
+                                  ...comedor.map((r: Reservation) => ({ ...r, resType: 'comedor' as const })),
+                                  ...sala.map((r: RoomReservation) => ({ ...r, resType: 'sala' as const }))
                                 ];
                                 const maxBars = 3;
                                 const barsToShow = totalReservations.slice(0, maxBars);
@@ -1423,6 +1036,7 @@ const HomeAdmin = () => {
                         
                         return days;
                       })()}
+                      </div>
                     </div>
 
                     {/* Detalle de reservaciones del día seleccionado */}
@@ -1487,7 +1101,7 @@ const HomeAdmin = () => {
                               ))}
                               
                               {/* Reservaciones de Sala */}
-                              {sala.map((reservation) => (
+                              {sala.map((reservation: RoomReservation) => (
                                 <div key={`sala-${reservation.id}`} className="reservation-card">
                                   <div className="reservation-info">
                                     <div className="reservation-time">
@@ -1612,11 +1226,11 @@ const HomeAdmin = () => {
                 )}
               </div>
               <div style={{ marginTop: '0.75rem', color: '#718096', fontSize: '0.9rem' }}>
-                {getFilteredAndSortedUsers().length} de {users.length} usuarios
+                {filteredUsers.length} de {users.length} usuarios
               </div>
             </div>
             
-            {loading ? (
+            {loadingUsers ? (
               <div className="empty-state">
                 <p>Cargando usuarios...</p>
               </div>
@@ -1669,7 +1283,7 @@ const HomeAdmin = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {getFilteredAndSortedUsers().map((user) => (
+                    {filteredUsers.map((user: User) => (
                       <tr key={user.id}>
                         <td>{user.firstName}</td>
                         <td>{user.lastName}</td>
@@ -1683,7 +1297,7 @@ const HomeAdmin = () => {
                         <td>
                           <button 
                             className="btn-edit"
-                            onClick={() => handleEditUser(user)}
+                            onClick={() => editUser(user)}
                             title="Editar usuario"
                             style={{ marginRight: '8px' }}
                           >
@@ -1691,7 +1305,7 @@ const HomeAdmin = () => {
                           </button>
                           <button 
                             className="btn-delete"
-                            onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}
+                            onClick={() => openDeleteModal(user.id, `${user.firstName} ${user.lastName}`)}
                             title="Dar de baja usuario"
                           >
                             <TrashIcon size={18} color="white" />
@@ -1723,7 +1337,7 @@ const HomeAdmin = () => {
             <p>Selecciona una nueva fecha y horario</p>
           </div>
 
-          <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleReschedule(); }}>
+          <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleReschedule(loadAdminReservations); }}>
             <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
               <p style={{ margin: 0, color: '#4a5568', fontSize: '0.9rem' }}>
                 <strong>Reservación actual:</strong>
@@ -1881,7 +1495,7 @@ const HomeAdmin = () => {
       </div>
     )}
     
-    {showDeleteModal && userToDelete && (
+    {deleteModal.show && deleteModal.user && (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && cancelDelete()}>
         <div className="auth-card">
           <button className="modal-close" onClick={cancelDelete}>&times;</button>
@@ -1894,7 +1508,7 @@ const HomeAdmin = () => {
             <div className="confirmation-message">
               <p>¿Estás seguro de que deseas dar de baja al usuario?</p>
               <div className="user-info-delete">
-                <strong>{userToDelete.name}</strong>
+                <strong>{deleteModal.user.name}</strong>
               </div>
               <p className="warning-text">Esta acción desactivará permanentemente la cuenta del usuario.</p>
             </div>
