@@ -354,6 +354,33 @@
   cursor: not-allowed;
 }
 
+.duration-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.duration-toggle-btn {
+  border: 0;
+  padding: 0.7rem 0.9rem;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.duration-toggle-btn:hover {
+  background: #eef2ff;
+}
+
+.duration-toggle-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
 /* Availability Badge */
 .form-group label {
   display: flex;

@@ -36,8 +36,16 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
       window.dispatchEvent(new Event('storage'));
       onClose();
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        setError(err.response.data);
+      if (axios.isAxiosError(err)) {
+        if (!err.response) {
+          setError('No se pudo conectar con el servidor. Verifica que el API esté disponible.');
+        } else if (err.response.status >= 500) {
+          setError('El servidor tiene un problema temporal (BD/API). Intenta nuevamente en unos minutos.');
+        } else if (typeof err.response.data === 'string' && err.response.data.trim()) {
+          setError(err.response.data);
+        } else {
+          setError('No fue posible iniciar sesión. Verifica tus credenciales e intenta de nuevo.');
+        }
       } else {
         setError('Credenciales inválidas o error del servidor.');
       }

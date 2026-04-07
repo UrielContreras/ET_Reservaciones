@@ -11,7 +11,10 @@ interface TimeSlot {
   id: number;
   timeRange: string;
   available: number;
+  durationMinutes: number;
 }
+
+type SlotDuration = 30 | 60;
 
 // Función auxiliar para calcular el tiempo restante hasta el fin del horario
 const getTimeRemaining = (timeRange: string): string => {
@@ -60,6 +63,7 @@ const getTimeRemaining = (timeRange: string): string => {
 const CreateReserv = ({ onClose }: CreateReservProps) => {
   const [timeSlotId, setTimeSlotId] = useState<number | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [slotDuration, setSlotDuration] = useState<SlotDuration>(60);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,13 +125,17 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
           return;
         }
 
-        const response = await axios.get(`${API_BASE_URL}/api/reservations/timeslots`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+        const response = await axios.get(
+          `${API_BASE_URL}/api/reservations/timeslots?durationMinutes=${slotDuration}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           }
-        });
+        );
 
         setTimeSlots(response.data);
+        setTimeSlotId(null);
         setLoading(false);
       } catch (err: unknown) {
         console.error('Error fetching timeslots:', err);
@@ -136,8 +144,9 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
       }
     };
 
+    setLoading(true);
     fetchTimeSlots();
-  }, []);
+  }, [slotDuration]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +251,26 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
           ) : (
             <>
               <div className="form-group">
+                <label>Duración de la reservación</label>
+                <div className="duration-toggle" role="group" aria-label="Duración de reservación">
+                  <button
+                    type="button"
+                    className={`duration-toggle-btn ${slotDuration === 30 ? 'active' : ''}`}
+                    onClick={() => setSlotDuration(30)}
+                  >
+                    Media hora
+                  </button>
+                  <button
+                    type="button"
+                    className={`duration-toggle-btn ${slotDuration === 60 ? 'active' : ''}`}
+                    onClick={() => setSlotDuration(60)}
+                  >
+                    Una hora
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="timeSlot">Selecciona tu horario</label>
                 <select
                   id="timeSlot"
@@ -272,6 +301,10 @@ const CreateReserv = ({ onClose }: CreateReservProps) => {
                     );
                   })}
                 </select>
+
+                <small style={{ color: '#64748b', marginTop: '0.35rem', display: 'block' }}>
+                  Mostrando horarios de {slotDuration === 30 ? '30 minutos' : '1 hora'}.
+                </small>
                 
                 {timeSlotId && (
                   <div className="availability-indicators">

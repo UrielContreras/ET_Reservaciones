@@ -16,7 +16,7 @@ public class ReservationExpirationService : BackgroundService
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        _mexicoTimeZone = TimeZoneResolver.ResolveMexicoTimeZone();
     }
 
     private DateTime GetMexicoTime()

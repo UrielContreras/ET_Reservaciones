@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ComedorSalaApi.Data;
 using ComedorSalaApi.Dtos;
 using ComedorSalaApi.Models;
+using ComedorSalaApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ public class ReservationsController : ControllerBase
     public ReservationsController(AppDbContext db)
     {
         _db = db;
-        _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        _mexicoTimeZone = TimeZoneResolver.ResolveMexicoTimeZone();
     }
 
     private int GetCurrentUserId()
@@ -35,23 +36,60 @@ public class ReservationsController : ControllerBase
         return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _mexicoTimeZone);
     }
 
+
     [HttpGet("timeslots")]
     [Authorize]
-    public async Task<ActionResult<IEnumerable<object>>> GetAvailableTimeSlots()
+    public async Task<ActionResult<IEnumerable<object>>> GetAvailableTimeSlots([FromQuery] int? durationMinutes = null)
     {
         var now = GetMexicoTime();
         var today = DateOnly.FromDateTime(now);
-        var timeSlots = await _db.TimeSlots.Where(s => s.IsActive).OrderBy(s => s.StartTime).ToListAsync();
+        var activeSlots = await _db.TimeSlots
+            .Where(s => s.IsActive)
+            .ToListAsync();
 
-        var result = timeSlots.Select(slot => new
-        {
-            slot.Id,
-            TimeRange = $"{slot.StartTime:hh\\:mm}-{slot.EndTime:hh\\:mm}",
-            Available = CAPACIDAD - _db.Reservations.Count(r =>
+        var groupedSlots = activeSlots
+            .GroupBy(s => new { s.StartTime, s.EndTime })
+            .OrderBy(g => g.Key.StartTime)
+            .ToList();
+
+        var activeReservationsToday = await _db.Reservations
+            .Include(r => r.TimeSlot)
+            .Where(r =>
                 r.Date == today &&
-                r.TimeSlotId == slot.Id &&
                 (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress))
-        });
+            .ToListAsync();
+
+        var result = groupedSlots
+            .Select(group =>
+            {
+                var targetStart = group.Key.StartTime;
+                var targetEnd = group.Key.EndTime;
+                var targetHourBucket = targetStart.Hours;
+                var reservedInGroup = activeReservationsToday.Count(r =>
+                    r.TimeSlot.StartTime.Hours == targetHourBucket);
+                var duration = (int)(group.Key.EndTime - group.Key.StartTime).TotalMinutes;
+
+                return new
+                {
+                    Id = group.Min(s => s.Id),
+                    StartTime = targetStart,
+                    EndTime = targetEnd,
+                    TimeRange = $"{group.Key.StartTime:hh\\:mm}-{group.Key.EndTime:hh\\:mm}",
+                    DurationMinutes = duration,
+                    Available = Math.Max(0, CAPACIDAD - reservedInGroup)
+                };
+            })
+            .Where(slot => !durationMinutes.HasValue || slot.DurationMinutes == durationMinutes.Value)
+            .OrderBy(slot => slot.StartTime)
+            .ThenBy(slot => slot.EndTime)
+            .Select(slot => new
+            {
+                slot.Id,
+                slot.TimeRange,
+                slot.DurationMinutes,
+                slot.Available
+            })
+            .ToList();
 
         return Ok(result);
     }
@@ -175,11 +213,24 @@ public class ReservationsController : ControllerBase
         if (existingReservation)
             return BadRequest("Ya tienes una reservación para hoy. Solo puedes hacer una reservación por día.");
 
-        // Validar capacidad
-        var countActiveInSlot = await _db.Reservations.CountAsync(r =>
-            r.Date == today &&
-            r.TimeSlotId == request.TimeSlotId &&
-            (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress));
+        var equivalentSlotIds = await _db.TimeSlots
+            .Where(s => s.IsActive && s.StartTime == slot.StartTime && s.EndTime == slot.EndTime)
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        if (!equivalentSlotIds.Any())
+            return BadRequest("TimeSlot inválido.");
+
+        var canonicalSlotId = equivalentSlotIds.Min();
+        var targetHourBucket = slot.StartTime.Hours;
+
+        // Validar capacidad por bloque de una hora
+        var countActiveInSlot = await _db.Reservations
+            .Where(r =>
+                r.Date == today &&
+                (r.Status == ReservationStatus.Active || r.Status == ReservationStatus.InProgress) &&
+                r.TimeSlot.StartTime.Hours == targetHourBucket)
+            .CountAsync();
 
         if (countActiveInSlot >= CAPACIDAD)
             return BadRequest("No hay lugares disponibles en este horario.");
@@ -188,7 +239,7 @@ public class ReservationsController : ControllerBase
         {
             UserId = userId,
             Date = today,
-            TimeSlotId = request.TimeSlotId,
+            TimeSlotId = canonicalSlotId,
             Status = ReservationStatus.Active,
             CreatedAt = now
         };

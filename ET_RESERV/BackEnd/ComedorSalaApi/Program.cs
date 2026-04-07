@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text;
+using System.Text.Json;
 using ComedorSalaApi.Data;
 using ComedorSalaApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,15 +10,81 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var bootstrapJson = Environment.GetEnvironmentVariable("APP_BOOTSTRAP_JSON");
+if (!string.IsNullOrWhiteSpace(bootstrapJson))
+{
+    try
+    {
+        using var doc = JsonDocument.Parse(bootstrapJson);
+        var flattened = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+        void FlattenJson(string prefix, JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        var nextPrefix = string.IsNullOrEmpty(prefix)
+                            ? property.Name
+                            : $"{prefix}:{property.Name}";
+                        FlattenJson(nextPrefix, property.Value);
+                    }
+                    break;
+
+                case JsonValueKind.Array:
+                    var i = 0;
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        FlattenJson($"{prefix}:{i}", item);
+                        i++;
+                    }
+                    break;
+
+                case JsonValueKind.String:
+                    flattened[prefix] = element.GetString();
+                    break;
+
+                case JsonValueKind.Number:
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    flattened[prefix] = element.ToString();
+                    break;
+
+                case JsonValueKind.Null:
+                    flattened[prefix] = null;
+                    break;
+            }
+        }
+
+        FlattenJson(string.Empty, doc.RootElement);
+        builder.Configuration.AddInMemoryCollection(flattened);
+        Console.WriteLine("[CONFIG] APP_BOOTSTRAP_JSON cargado correctamente.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[CONFIG] Error al parsear APP_BOOTSTRAP_JSON: {ex.Message}");
+    }
+}
+
 // Configurar TimeZone de México
-var mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+var mexicoTimeZone = TimeZoneResolver.ResolveMexicoTimeZone(builder.Configuration["AppSettings:TimeZoneId"]);
 TimeZoneInfo.ClearCachedData();
 Console.WriteLine($"[TIMEZONE] Zona horaria configurada: {mexicoTimeZone.Id}");
 Console.WriteLine($"[TIMEZONE] Hora actual en México: {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, mexicoTimeZone):yyyy-MM-dd HH:mm:ss}");
 
 // DB
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+            sqlOptions.CommandTimeout(60);
+        }));
 
 // PasswordHasher para User
 builder.Services.AddScoped<IPasswordHasher<ComedorSalaApi.Models.User>, PasswordHasher<ComedorSalaApi.Models.User>>();
@@ -52,17 +120,43 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:3000",
-                "https://comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
-              )
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        var explicitOrigins = new[]
+        {
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:3000",
+            "https://comedorsalaweb-b8f3hwcuhjhvh3bt.westus2-01.azurewebsites.net"
+        };
+
+        policy.SetIsOriginAllowed(origin =>
+            {
+                if (explicitOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                    return true;
+
+                if (!builder.Environment.IsDevelopment())
+                    return false;
+
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                    return false;
+
+                if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (!IPAddress.TryParse(uri.Host, out var ip))
+                    return false;
+
+                var bytes = ip.GetAddressBytes();
+                return bytes.Length == 4 &&
+                       (bytes[0] == 10 ||
+                        (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                        (bytes[0] == 192 && bytes[1] == 168));
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -81,10 +175,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-} 
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
@@ -94,44 +184,69 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Aplicar migraciones pendientes automáticamente
-using (var scope = app.Services.CreateScope())
+var runDbInitializationOnStartup = builder.Environment.IsDevelopment() ||
+                                   builder.Configuration.GetValue<bool>("Startup:RunDbInitialization");
+
+if (runDbInitializationOnStartup)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    
-    Console.WriteLine("[MIGRATIONS] Verificando migraciones pendientes...");
-    var pendingMigrations = db.Database.GetPendingMigrations().ToList();
-    
-    if (pendingMigrations.Any())
+    // Aplicar migraciones pendientes automáticamente
+    using (var scope = app.Services.CreateScope())
     {
-        Console.WriteLine($"[MIGRATIONS] Aplicando {pendingMigrations.Count} migración(es) pendiente(s):");
-        foreach (var migration in pendingMigrations)
+        try
         {
-            Console.WriteLine($"[MIGRATIONS] - {migration}");
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            Console.WriteLine("[MIGRATIONS] Verificando migraciones pendientes...");
+            var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+
+            if (pendingMigrations.Any())
+            {
+                Console.WriteLine($"[MIGRATIONS] Aplicando {pendingMigrations.Count} migración(es) pendiente(s):");
+                foreach (var migration in pendingMigrations)
+                {
+                    Console.WriteLine($"[MIGRATIONS] - {migration}");
+                }
+
+                db.Database.Migrate();
+                Console.WriteLine("[MIGRATIONS] Migraciones aplicadas exitosamente");
+            }
+            else
+            {
+                Console.WriteLine("[MIGRATIONS] No hay migraciones pendientes");
+            }
         }
-        
-        db.Database.Migrate();
-        Console.WriteLine("[MIGRATIONS] Migraciones aplicadas exitosamente");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MIGRATIONS] Error al aplicar migraciones: {ex.Message}");
+            Console.WriteLine("[MIGRATIONS] La aplicación continuará iniciando para facilitar diagnóstico en Azure.");
+        }
     }
-    else
+
+    // Seed TimeSlots if they don't exist
+    using (var scope = app.Services.CreateScope())
     {
-        Console.WriteLine("[MIGRATIONS] No hay migraciones pendientes");
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (!db.TimeSlots.Any())
+            {
+                db.TimeSlots.AddRange(
+                    new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(14, 0, 0), IsActive = true },
+                    new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(14, 0, 0), EndTime = new TimeSpan(15, 0, 0), IsActive = true },
+                    new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(15, 0, 0), EndTime = new TimeSpan(16, 0, 0), IsActive = true }
+                );
+                db.SaveChanges();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SEED] Error al sembrar TimeSlots: {ex.Message}");
+        }
     }
 }
-
-// Seed TimeSlots if they don't exist
-using (var scope = app.Services.CreateScope())
+else
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (!db.TimeSlots.Any())
-    {
-        db.TimeSlots.AddRange(
-            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(14, 0, 0), IsActive = true },
-            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(14, 0, 0), EndTime = new TimeSpan(15, 0, 0), IsActive = true },
-            new ComedorSalaApi.Models.TimeSlot { StartTime = new TimeSpan(15, 0, 0), EndTime = new TimeSpan(16, 0, 0), IsActive = true }
-        );
-        db.SaveChanges();
-    }
+    Console.WriteLine("[STARTUP] Inicialización de DB en arranque deshabilitada para este entorno.");
 }
 
 app.Run();

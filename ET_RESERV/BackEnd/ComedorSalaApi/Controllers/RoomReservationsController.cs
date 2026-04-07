@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ComedorSalaApi.Data;
 using ComedorSalaApi.Dtos;
 using ComedorSalaApi.Models;
+using ComedorSalaApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public class RoomReservationsController : ControllerBase
     public RoomReservationsController(AppDbContext db)
     {
         _db = db;
-        _mexicoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        _mexicoTimeZone = TimeZoneResolver.ResolveMexicoTimeZone();
     }
 
     private int GetCurrentUserId()
