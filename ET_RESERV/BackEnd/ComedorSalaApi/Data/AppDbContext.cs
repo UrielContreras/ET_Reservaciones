@@ -31,6 +31,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(r => r.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Evita OUTPUT sin INTO cuando hay triggers en Reservations
+        modelBuilder.Entity<Reservation>()
+            .ToTable(tb => tb.UseSqlOutputClause(false));
+
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.TimeSlot)
             .WithMany()
