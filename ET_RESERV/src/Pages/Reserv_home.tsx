@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE_URL } from '../apiConfig';
+import { API_BASE_URL, clearAuthStorage } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import CreateReserv from './Create_reserv';
 import CreateRoomReserv from './Create_room_reserv';
@@ -88,7 +88,11 @@ const ReservHome = () => {
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        clearAuthStorage();
+        setLoading(false);
+        return;
+      }
 
       try {
         // Fetch user profile

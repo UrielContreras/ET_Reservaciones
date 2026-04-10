@@ -4,6 +4,7 @@ import Login from './Pages/Login'
 import Register from './Pages/Register'
 import ReservHome from './Pages/Reserv_home'
 import HomeAdmin from './Pages/Home_Admin'
+import { clearAuthStorage } from './apiConfig'
 
 function App() {
   const [showLogin, setShowLogin] = useState(false)
@@ -23,6 +24,15 @@ function App() {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const authStatus = localStorage.getItem('isAuthenticated') === 'true';
+    if (authStatus && !token) {
+      clearAuthStorage();
+      setIsAuthenticated(false);
+    }
   }, []);
 
   useEffect(() => {
