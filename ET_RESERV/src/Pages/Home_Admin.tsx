@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import { API_BASE_URL } from '../apiConfig';
 import '../Styles/Reserv_home.css';
 import Register from './Register';
@@ -91,6 +92,13 @@ const HomeAdmin = () => {
   const [rescheduleEndTime, setRescheduleEndTime] = useState('');
   const [rescheduleError, setRescheduleError] = useState('');
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  // Estados para reportes Excel
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [reportType, setReportType] = useState<'daily' | 'weekly'>('daily');
+  const [reportDate, setReportDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [reportStartDate, setReportStartDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [reportEndDate, setReportEndDate] = useState(() => new Date().toLocaleDateString('en-CA'));
 
   // Función para generar colores basados en hash (estáticos por ID)
   const getColorFromId = (id: number): string => {
@@ -640,6 +648,75 @@ const HomeAdmin = () => {
     setUserToDelete(null);
   };
 
+  const handleGenerateReport = () => {
+    let targetReservations = [...reservations];
+    let targetRoomReservations = [...roomReservations];
+
+    // Filtrar por fecha
+    if (reportType === 'daily') {
+      targetReservations = targetReservations.filter(r => r.date === reportDate);
+      targetRoomReservations = targetRoomReservations.filter(r => r.date === reportDate);
+    } else {
+      targetReservations = targetReservations.filter(r => r.date >= reportStartDate && r.date <= reportEndDate);
+      targetRoomReservations = targetRoomReservations.filter(r => r.date >= reportStartDate && r.date <= reportEndDate);
+    }
+
+    // Aplicar restricción de Viernes 4PM
+    const applyFridayRestriction = (reservs: any[]) => {
+      return reservs.filter(r => {
+        const parts = r.date.split('-');
+        if (parts.length === 3) {
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          if (d.getDay() === 5) { // Viernes
+            const timeStart = r.timeRange.split('-')[0];
+            if (timeStart < "16:00") {
+              return false; // Excluir
+            }
+          }
+        }
+        return true;
+      });
+    };
+
+    targetReservations = applyFridayRestriction(targetReservations);
+    targetRoomReservations = applyFridayRestriction(targetRoomReservations);
+
+    // Preparar datos para Excel
+    const comedorData = targetReservations.map(r => ({
+      'Fecha': r.date,
+      'Horario': r.timeRange,
+      'Usuario': r.userName,
+      'Email': r.email,
+      'Área': r.area || 'N/A',
+      'Estado': r.status
+    }));
+
+    const salaData = targetRoomReservations.map(r => ({
+      'Fecha': r.date,
+      'Horario': r.timeRange,
+      'Sala/Reunión': r.meetingName || 'N/A',
+      'Usuario': r.userName,
+      'Email': r.email,
+      'Área': r.area || 'N/A',
+      'Estado': r.status
+    }));
+
+    const wb = XLSX.utils.book_new();
+    
+    const wsComedor = XLSX.utils.json_to_sheet(comedorData.length ? comedorData : [{'Mensaje': 'No hay reservaciones de comedor'}]);
+    XLSX.utils.book_append_sheet(wb, wsComedor, "Comedor");
+    
+    const wsSala = XLSX.utils.json_to_sheet(salaData.length ? salaData : [{'Mensaje': 'No hay reservaciones de sala'}]);
+    XLSX.utils.book_append_sheet(wb, wsSala, "Salas");
+
+    const fileName = reportType === 'daily' 
+      ? `Reporte_Reservaciones_${reportDate}.xlsx` 
+      : `Reporte_Reservaciones_${reportStartDate}_al_${reportEndDate}.xlsx`;
+    
+    XLSX.writeFile(wb, fileName);
+    setShowReportsModal(false);
+  };
+
   return (
     <>
     <div className="reserv-container">
@@ -717,6 +794,13 @@ const HomeAdmin = () => {
             <h3>Nueva Reservacion</h3>
             <p className="card-text">Crea una nueva reservación</p>
             <button className="btn-card primary" onClick={() => setShowReservationTypeModal(true)}>Crear</button>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-icon"><ChartIcon size={32} color="#667eea" /></div>
+            <h3>Reportes Excel</h3>
+            <p className="card-text">Descargar reporte diario o semanal</p>
+            <button className="btn-card primary" onClick={() => setShowReportsModal(true)}>Descargar</button>
           </div>
         </div>
 
@@ -1906,6 +1990,70 @@ const HomeAdmin = () => {
               <button onClick={confirmDelete} className="btn-danger">
                 Sí, Eliminar
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showReportsModal && (
+      <div className="modal-overlay" onClick={() => setShowReportsModal(false)}>
+        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowReportsModal(false)}>&times;</button>
+          <div className="auth-header">
+            <h1>Descargar Reportes</h1>
+            <p>Selecciona el tipo de reporte a descargar</p>
+          </div>
+
+          <div className="auth-form">
+            <div className="form-group">
+              <label>Tipo de Reporte</label>
+              <select 
+                value={reportType} 
+                onChange={(e) => setReportType(e.target.value as 'daily' | 'weekly')}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+              >
+                <option value="daily">Reporte Diario</option>
+                <option value="weekly">Reporte Semanal (Rango de fechas)</option>
+              </select>
+            </div>
+
+            {reportType === 'daily' ? (
+              <div className="form-group">
+                <label>Fecha</label>
+                <input 
+                  type="date" 
+                  value={reportDate} 
+                  onChange={(e) => setReportDate(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Desde</label>
+                  <input 
+                    type="date" 
+                    value={reportStartDate} 
+                    onChange={(e) => setReportStartDate(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Hasta</label>
+                  <input 
+                    type="date" 
+                    value={reportEndDate} 
+                    onChange={(e) => setReportEndDate(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="button-group" style={{ marginTop: '1.5rem' }}>
+              <button className="btn-secondary" onClick={() => setShowReportsModal(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={handleGenerateReport}>Generar Excel</button>
             </div>
           </div>
         </div>
